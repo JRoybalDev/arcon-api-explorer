@@ -74,7 +74,7 @@ export function App() {
       {!isDashboard ? (
         <motion.header animate={topbarControls} className={isTopbarScrolled ? "topbar grid-area-header" : "topbar grid-area-header"}>
           <a className="brand" href="/">
-            Fullstack Template
+            ARCON API Explorer
           </a>
           <div className="topbar-actions">
             <nav className="nav-links" aria-label="Primary">

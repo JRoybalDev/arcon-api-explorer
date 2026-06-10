@@ -20,7 +20,7 @@ export const useDraftStore = create<DraftState>()(
       setDraft: (draft) => set({ draft })
     }),
     {
-      name: "fullstack-template-dashboard"
+      name: "arcon-api-explorer-dashboard"
     }
   )
 );

@@ -1,24 +1,24 @@
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 
   --brand-font-sans:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
-  --brand-white: #ffffff;
-  --brand-ink-950: #101828;
-  --brand-ink-900: #18212f;
-  --brand-ink-700: #445064;
-  --brand-ink-600: #536173;
-  --brand-paper-50: #f8fafc;
-  --brand-paper-100: #f7f7f2;
-  --brand-paper-200: #eef6f7;
-  --brand-paper-300: #e7f0e8;
-  --brand-border-100: #deded2;
-  --brand-border-200: #c9c9bd;
-  --brand-teal-700: #006d77;
-  --brand-teal-800: #005f69;
-  --brand-green-900: #193926;
-  --brand-indigo-600: #635bff;
+  --brand-white: #0e0e18;
+  --brand-ink-950: #f7f7ff;
+  --brand-ink-900: #dddde8;
+  --brand-ink-700: #9898b0;
+  --brand-ink-600: #6a6a80;
+  --brand-paper-50: #141420;
+  --brand-paper-100: #08080d;
+  --brand-paper-200: #111b33;
+  --brand-paper-300: #141420;
+  --brand-border-100: rgba(255, 255, 255, 0.07);
+  --brand-border-200: #2a2a3c;
+  --brand-teal-700: #4d7cff;
+  --brand-teal-800: #7fa4ff;
+  --brand-green-900: #ffffff;
+  --brand-indigo-600: #4d7cff;
   --brand-red-50: #fff1f1;
   --brand-red-200: #f1c5c5;
   --brand-red-700: #b42318;
@@ -30,7 +30,7 @@
   --app-surface-danger: var(--brand-red-50);
   --app-border: var(--brand-border-100);
   --app-border-strong: var(--brand-border-200);
-  --app-border-accent: #c7dde0;
+  --app-border-accent: rgba(77, 124, 255, 0.35);
   --app-border-danger: var(--brand-red-200);
   --app-text: var(--brand-ink-900);
   --app-heading: var(--brand-ink-950);
@@ -46,31 +46,31 @@
   --app-button-secondary-text: var(--app-accent-strong);
   --app-nav-active: var(--brand-paper-300);
   --app-danger: var(--brand-red-700);
-  --app-topbar: rgba(247, 247, 242, 0.92);
+  --app-topbar: #08080d;
 }
 
-:root[data-theme="dark"] {
-  color-scheme: dark;
+:root[data-theme="light"] {
+  color-scheme: light;
 
-  --brand-white: #191f27;
-  --brand-ink-950: #f7fafc;
-  --brand-ink-900: #e8edf3;
-  --brand-ink-700: #c6d0dd;
-  --brand-ink-600: #aab6c5;
-  --brand-paper-50: #202833;
-  --brand-paper-100: #111418;
-  --brand-paper-200: #16333a;
-  --brand-paper-300: #18382f;
-  --brand-border-100: #2c3440;
-  --brand-border-200: #435061;
-  --brand-teal-700: #55c8d6;
-  --brand-teal-800: #9de4ec;
-  --brand-green-900: #d6fbef;
-  --brand-indigo-600: #7c73ff;
-  --brand-red-50: #3a2020;
-  --brand-red-200: #6f3535;
-  --brand-red-700: #ff9b8f;
+  --brand-white: #ffffff;
+  --brand-ink-950: #0d1220;
+  --brand-ink-900: #1b2030;
+  --brand-ink-700: #4b556f;
+  --brand-ink-600: #59637a;
+  --brand-paper-50: #eef1f8;
+  --brand-paper-100: #f6f7fb;
+  --brand-paper-200: #e8eeff;
+  --brand-paper-300: #edf2ff;
+  --brand-border-100: #dfe4f2;
+  --brand-border-200: #c6cee3;
+  --brand-teal-700: #245cff;
+  --brand-teal-800: #163fd4;
+  --brand-green-900: #ffffff;
+  --brand-indigo-600: #245cff;
+  --brand-red-50: #fff1f1;
+  --brand-red-200: #f1c5c5;
+  --brand-red-700: #b42318;
 
-  --app-border-accent: #2b6871;
-  --app-topbar: rgba(17, 20, 24, 0.92);
+  --app-border-accent: #b8c8ff;
+  --app-topbar: rgba(246, 247, 251, 0.92);
 }

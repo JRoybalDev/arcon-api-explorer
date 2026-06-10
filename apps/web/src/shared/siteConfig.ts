@@ -1,7 +1,7 @@
 export const siteConfig = {
-  siteName: "Fullstack Template",
-  defaultPageName: "Home",
-  dashboardPageName: "Dashboard",
+  siteName: "ARCON API Explorer",
+  defaultPageName: "Media CDN",
+  dashboardPageName: "Control Room",
   faviconHref: "/favicon.svg",
   frontendAsideMode: "static" as "scroll" | "static"
 };

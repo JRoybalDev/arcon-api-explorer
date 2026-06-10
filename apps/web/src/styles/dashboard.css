@@ -1,7 +1,5 @@
 .dashboard-gate {
-  background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--app-surface-accent) 70%, transparent), transparent 34rem),
-    linear-gradient(135deg, var(--app-bg), var(--app-surface-muted));
+  background: var(--app-bg);
   display: grid;
   min-height: 100vh;
   padding: clamp(24px, 5vw, 56px);
@@ -9,7 +7,7 @@
 }
 
 .dashboard-gate__panel {
-  background: color-mix(in srgb, var(--app-surface) 92%, transparent);
+  background: var(--app-surface);
   border: 1px solid var(--app-border);
   border-radius: 8px;
   box-shadow: 0 22px 70px var(--dashboard-brand-shadow);
@@ -28,9 +26,10 @@
 .dashboard-gate__mark,
 .access-icon {
   align-items: center;
-  background: linear-gradient(135deg, var(--app-accent), var(--app-accent-strong));
+  background: color-mix(in srgb, var(--app-accent) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--app-accent) 32%, transparent);
   border-radius: 8px;
-  color: var(--app-bg);
+  color: var(--app-accent);
   display: inline-flex;
   height: 48px;
   justify-content: center;
@@ -146,9 +145,7 @@
 }
 
 .dashboard-shell {
-  background:
-    radial-gradient(circle at 82% 0%, color-mix(in srgb, var(--app-surface-accent) 72%, transparent), transparent 28rem),
-    linear-gradient(135deg, var(--app-bg), var(--app-surface-muted));
+  background: var(--app-bg);
   display: grid;
   grid-template-columns: minmax(230px, 288px) minmax(0, 1fr);
   height: 100vh;
@@ -156,8 +153,7 @@
 }
 
 .dashboard-sidebar {
-  background: color-mix(in srgb, var(--app-surface) 88%, transparent);
-  border-right: 1px solid var(--app-border);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -178,10 +174,10 @@
 
 .dashboard-brand-lockup > span {
   align-items: center;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--app-accent) 92%, #ffffff), var(--app-accent-strong));
+  background: color-mix(in srgb, var(--app-accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--app-accent) 28%, transparent);
   border-radius: 8px;
-  color: var(--app-bg);
+  color: var(--app-accent);
   display: inline-flex;
   flex: 0 0 auto;
   font-size: 0.92rem;
@@ -208,18 +204,18 @@
 }
 
 .dashboard-nav__group {
-  background: color-mix(in srgb, var(--app-surface) 64%, transparent);
-  border: 1px solid color-mix(in srgb, var(--app-border) 78%, transparent);
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: 8px;
   overflow: hidden;
 }
 
 .dashboard-nav__group--active {
-  border-color: color-mix(in srgb, var(--app-accent) 42%, var(--app-border));
+  border-color: color-mix(in srgb, var(--app-accent) 20%, transparent);
 }
 
 .dashboard-nav__group--open {
-  background: color-mix(in srgb, var(--app-surface) 84%, transparent);
+  background: color-mix(in srgb, var(--app-surface-muted) 55%, transparent);
 }
 
 .dashboard-nav__group-trigger {
@@ -277,8 +273,8 @@
 
 .dashboard-nav__link:hover,
 .dashboard-nav__link--active {
-  background: color-mix(in srgb, var(--app-surface-accent) 58%, transparent);
-  border-color: color-mix(in srgb, var(--app-accent) 28%, var(--app-border));
+  background: color-mix(in srgb, var(--app-accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--app-accent) 24%, transparent);
   color: var(--app-heading);
 }
 
@@ -412,7 +408,7 @@
 }
 
 .dashboard-action--primary {
-  background: linear-gradient(135deg, var(--app-accent), var(--app-accent-strong));
+  background: var(--app-accent);
   border-color: transparent;
   color: var(--app-bg);
 }
@@ -430,7 +426,7 @@
 }
 
 .dashboard-metric {
-  background: color-mix(in srgb, var(--app-surface) 88%, transparent);
+  background: var(--app-surface);
   border: 1px solid var(--app-border);
   border-radius: 8px;
   display: grid;
@@ -454,7 +450,7 @@
 }
 
 .dashboard-workspace__panel {
-  background: color-mix(in srgb, var(--app-surface) 92%, transparent);
+  background: var(--app-surface);
   border: 1px solid var(--app-border);
   border-radius: 8px;
   box-shadow: 0 18px 58px var(--dashboard-brand-shadow);
@@ -937,7 +933,7 @@
 }
 
 .links-header .icon-button {
-  background: linear-gradient(135deg, var(--app-accent), var(--app-accent-strong));
+  background: var(--app-accent);
   border-color: transparent;
   color: var(--app-bg);
 }

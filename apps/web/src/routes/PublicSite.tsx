@@ -67,13 +67,13 @@ export function PublicSite() {
           transition={{ delay: 0.04, duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
           variants={sectionMotion}
         >
-          <div className="template-section__label">Left Aside</div>
-          <h2>Secondary rail</h2>
-          <p>Place filters, section links, table-of-contents items, or supporting navigation here.</p>
+          <div className="template-section__label">Endpoints</div>
+          <h2>Public reads</h2>
+          <p>Published collection metadata stays open for consumers while every write remains protected by the admin key.</p>
           <div className="template-placeholder-list">
-            <span>Section link</span>
-            <span>Quick filter</span>
-            <span>Resource item</span>
+            <span>GET /api/sites</span>
+            <span>GET /api/sites/:slug</span>
+            <span>GET /uploads/*</span>
           </div>
         </motion.aside>
 
@@ -85,18 +85,18 @@ export function PublicSite() {
           transition={{ delay: 0.1, duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
           variants={sectionMotion}
         >
-          <div className="template-section__label">Main</div>
+          <div className="template-section__label">Explorer</div>
           <div className="public-hero">
             <div className="public-hero-copy">
-              <span className="eyebrow">React 19 + Bun + Hono + Drizzle</span>
-              <h1>{featured?.title ?? "Fullstack template ready for your next launch"}</h1>
+              <span className="eyebrow">Self-hosted media CDN</span>
+              <h1>{featured?.title ?? "ARCON API Explorer"}</h1>
               <p>
                 {featured?.description ||
-                  "A Bun-first TypeScript stack with a public site, admin dashboard, shared Zod schemas, Postgres persistence, uploads, and protected writes."}
+                  "Serve images and media from your own server with protected uploads, generated WebP thumbnails, and predictable JSON responses for client apps."}
               </p>
               <div className="hero-actions">
                 <a href="/dashboard" className="btn btn-primary">
-                  Open dashboard
+                  Open control room
                 </a>
                 <a href="http://localhost:3001/health" className="btn btn-secondary">
                   API health <FiExternalLink aria-hidden />
@@ -110,7 +110,7 @@ export function PublicSite() {
               <SiteCard key={site.id} site={site} />
             ))}
             {publishedSites.length === 0 ? (
-              <div className="public-empty">No published records yet. Create one in the dashboard.</div>
+              <div className="public-empty">No published collections yet. Create one in the control room.</div>
             ) : null}
           </div>
         </motion.section>
@@ -122,17 +122,17 @@ export function PublicSite() {
           transition={{ delay: 0.16, duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
           variants={sectionMotion}
         >
-          <div className="template-section__label">Right Aside</div>
-          <h2>Supporting content</h2>
-          <p>Use this area for calls to action, featured links, stats, related content, or page-specific tools.</p>
+          <div className="template-section__label">Status</div>
+          <h2>CDN snapshot</h2>
+          <p>Use the dashboard to publish collections, upload media, copy URLs, and keep storage cleanup in sync.</p>
           <div className="aside-stat-grid">
             <div>
               <strong>{publishedSites.length}</strong>
-              <span>Published</span>
+              <span>Collections</span>
             </div>
             <div>
               <strong>{featured?.links.length ?? 0}</strong>
-              <span>Links</span>
+              <span>Quick links</span>
             </div>
           </div>
         </motion.aside>
@@ -145,8 +145,8 @@ export function PublicSite() {
         transition={{ delay: 0.22, duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
         variants={sectionMotion}
       >
-        <div className="template-section__label">Footer</div>
-        <p>Footer content spans the full template width below the main and aside areas.</p>
+        <div className="template-section__label">Contract</div>
+        <p>All API responses include a request ID for log correlation and structured JSON envelopes for client integrations.</p>
       </motion.footer>
     </section>
   );

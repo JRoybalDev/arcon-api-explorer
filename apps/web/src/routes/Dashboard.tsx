@@ -35,76 +35,76 @@ import { type ThemeMode, useThemeMode } from "../state/themeStore";
 
 const defaultDraft: SiteDraftInput = {
   slug: "home",
-  title: "A sharp new site",
-  description: "Edit this content in the dashboard and publish it to the public page.",
+  title: "ARCON Media CDN",
+  description: "Self-hosted image and media delivery with protected uploads, optimized thumbnails, and public API records.",
   heroImageUrl: "",
   metadata: {
-    seoTitle: "",
-    seoDescription: "",
+    seoTitle: "ARCON API Explorer",
+    seoDescription: "Browse published media collections and integrate with a self-hosted CDN API.",
     ogImageUrl: "",
     frontendAsideMode: "static"
   },
   branding: {
-    backgroundColor: "#f7f7f2",
-    lightBackgroundColor: "#f7f7f2",
-    darkBackgroundColor: "#111418",
+    backgroundColor: "#08080d",
+    lightBackgroundColor: "#f6f7fb",
+    darkBackgroundColor: "#08080d",
     lightSurfaceColor: "#ffffff",
-    darkSurfaceColor: "#191f27",
-    lightSurfaceMutedColor: "#f8fafc",
-    darkSurfaceMutedColor: "#202833",
-    lightSurfaceAccentColor: "#eef6f7",
-    darkSurfaceAccentColor: "#16333a",
-    lightBorderColor: "#deded2",
-    darkBorderColor: "#2c3440",
-    lightBorderStrongColor: "#c9c9bd",
-    darkBorderStrongColor: "#435061",
-    lightBorderAccentColor: "#c7dde0",
-    darkBorderAccentColor: "#2b6871",
+    darkSurfaceColor: "#0e0e18",
+    lightSurfaceMutedColor: "#eef1f8",
+    darkSurfaceMutedColor: "#141420",
+    lightSurfaceAccentColor: "#e8eeff",
+    darkSurfaceAccentColor: "#111b33",
+    lightBorderColor: "#dfe4f2",
+    darkBorderColor: "rgba(255,255,255,0.07)",
+    lightBorderStrongColor: "#c6cee3",
+    darkBorderStrongColor: "#2a2a3c",
+    lightBorderAccentColor: "#b8c8ff",
+    darkBorderAccentColor: "rgba(77,124,255,0.35)",
     lightSurfaceDangerColor: "#fff1f1",
     darkSurfaceDangerColor: "#3a2020",
     lightBorderDangerColor: "#f1c5c5",
     darkBorderDangerColor: "#6f3535",
-    lightTextColor: "#18212f",
-    darkTextColor: "#e8edf3",
-    lightHeadingColor: "#101828",
-    darkHeadingColor: "#f7fafc",
-    lightMutedColor: "#536173",
-    darkMutedColor: "#aab6c5",
-    lightNavColor: "#445064",
-    darkNavColor: "#c6d0dd",
-    lightAccentColor: "#006d77",
-    darkAccentColor: "#55c8d6",
-    lightAccentStrongColor: "#005f69",
-    darkAccentStrongColor: "#9de4ec",
-    lightAccentTextColor: "#193926",
-    darkAccentTextColor: "#d6fbef",
-    lightButtonPrimaryColor: "#635bff",
-    darkButtonPrimaryColor: "#7c73ff",
+    lightTextColor: "#1b2030",
+    darkTextColor: "#dddde8",
+    lightHeadingColor: "#0d1220",
+    darkHeadingColor: "#f7f7ff",
+    lightMutedColor: "#59637a",
+    darkMutedColor: "#9898b0",
+    lightNavColor: "#4b556f",
+    darkNavColor: "#9898b0",
+    lightAccentColor: "#245cff",
+    darkAccentColor: "#4d7cff",
+    lightAccentStrongColor: "#163fd4",
+    darkAccentStrongColor: "#7fa4ff",
+    lightAccentTextColor: "#ffffff",
+    darkAccentTextColor: "#ffffff",
+    lightButtonPrimaryColor: "#245cff",
+    darkButtonPrimaryColor: "#4d7cff",
     lightButtonPrimaryTextColor: "#ffffff",
     darkButtonPrimaryTextColor: "#ffffff",
-    lightButtonSecondaryColor: "#eef6f7",
-    darkButtonSecondaryColor: "#202833",
-    lightButtonSecondaryTextColor: "#005f69",
-    darkButtonSecondaryTextColor: "#9de4ec",
-    lightButtonSecondaryBorderColor: "#c7dde0",
-    darkButtonSecondaryBorderColor: "#435061",
+    lightButtonSecondaryColor: "#edf2ff",
+    darkButtonSecondaryColor: "#141420",
+    lightButtonSecondaryTextColor: "#163fd4",
+    darkButtonSecondaryTextColor: "#dddde8",
+    lightButtonSecondaryBorderColor: "#b8c8ff",
+    darkButtonSecondaryBorderColor: "rgba(255,255,255,0.08)",
     lightDangerColor: "#b42318",
     darkDangerColor: "#ff9b8f",
-    lightNavActiveColor: "#e7f0e8",
-    darkNavActiveColor: "#18382f",
-    lightTopbarColor: "#f7f7f2",
-    darkTopbarColor: "#111418",
-    surfaceColor: "#ffffff",
-    textColor: "#18212f",
-    headingColor: "#101828",
-    accentColor: "#006d77"
+    lightNavActiveColor: "#edf2ff",
+    darkNavActiveColor: "#141420",
+    lightTopbarColor: "rgba(246,247,251,0.92)",
+    darkTopbarColor: "#08080d",
+    surfaceColor: "#0e0e18",
+    textColor: "#dddde8",
+    headingColor: "#f7f7ff",
+    accentColor: "#4d7cff"
   },
-  links: [{ label: "Contact", href: "https://example.com", kind: "primary" }],
+  links: [{ label: "Open API docs", href: "http://localhost:3001/docs", kind: "primary" }],
   published: true
 };
 
 type DashboardTabId = "start" | "overview" | "layout" | "metadata" | "branding" | "links" | "users" | "records" | "uploads" | "help";
-type DashboardGroupId = "site" | "library" | "support";
+type DashboardGroupId = "operations" | "library" | "developer";
 
 type DashboardTab = {
   id: DashboardTabId;
@@ -120,10 +120,10 @@ type DashboardGroup = {
 
 const dashboardGroups: DashboardGroup[] = [
   {
-    id: "site",
-    label: "Site workspace",
+    id: "operations",
+    label: "Operations",
     tabs: [
-      { id: "start", label: "Start Guide", icon: FiHelpCircle },
+      { id: "start", label: "Launch Checklist", icon: FiHelpCircle },
       { id: "overview", label: "Overview", icon: FiSettings },
       { id: "layout", label: "Layout", icon: FiGrid },
       { id: "metadata", label: "Metadata", icon: FiSliders },
@@ -141,9 +141,9 @@ const dashboardGroups: DashboardGroup[] = [
     ]
   },
   {
-    id: "support",
-    label: "Support",
-    tabs: [{ id: "help", label: "Help", icon: FiHelpCircle }]
+    id: "developer",
+    label: "Developer",
+    tabs: [{ id: "help", label: "API Guide", icon: FiHelpCircle }]
   }
 ];
 
@@ -182,7 +182,7 @@ export function Dashboard() {
   const setDraft = useDraftStore((state) => state.setDraft);
   const prefersReducedMotion = useReducedMotion();
   const [activeTabId, setActiveTabId] = useState<DashboardTabId>("start");
-  const [openGroupId, setOpenGroupId] = useState<DashboardGroupId>("site");
+  const [openGroupId, setOpenGroupId] = useState<DashboardGroupId>("operations");
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [uploadMessage, setUploadMessage] = useState("");
@@ -467,8 +467,8 @@ export function Dashboard() {
     <section className="dashboard-shell">
       <div className="dashboard-mobile-bar">
         <div>
-          <p className="dashboard-eyebrow">J Roybal Dev</p>
-          <h1>Dashboard</h1>
+          <p className="dashboard-eyebrow">ARCON</p>
+          <h1>Control Room</h1>
         </div>
         <button className="dashboard-mobile-nav-button" type="button" onClick={() => setIsMobileNavOpen(true)}>
           <FiMenu aria-hidden />
@@ -479,10 +479,10 @@ export function Dashboard() {
       <aside className="dashboard-sidebar dashboard-sidebar--desktop" aria-label="Dashboard sections">
         <div>
           <div className="dashboard-brand-lockup">
-            <span aria-hidden>JR</span>
+            <span aria-hidden>AR</span>
             <div>
-              <p className="dashboard-eyebrow">J Roybal Dev</p>
-              <h1>Dashboard</h1>
+              <p className="dashboard-eyebrow">ARCON</p>
+              <h1>Control Room</h1>
             </div>
           </div>
         </div>
@@ -516,8 +516,8 @@ export function Dashboard() {
               <div className="dashboard-mobile-nav__handle" aria-hidden />
               <div className="dashboard-mobile-nav__header">
                 <div>
-                  <p className="dashboard-eyebrow">J Roybal Dev</p>
-                  <h2>Dashboard</h2>
+                  <p className="dashboard-eyebrow">ARCON</p>
+                  <h2>Control Room</h2>
                 </div>
                 <button aria-label="Close dashboard menu" className="dashboard-mobile-nav__close" type="button" onClick={() => setIsMobileNavOpen(false)}>
                   <FiX aria-hidden />
@@ -542,14 +542,14 @@ export function Dashboard() {
       <section className="dashboard-workspace" aria-labelledby="dashboard-section-title">
         <div className="dashboard-workspace__header">
           <div>
-            <p className="dashboard-eyebrow">Editing</p>
+            <p className="dashboard-eyebrow">Media CDN</p>
             <h2 id="dashboard-section-title">{activeTab.label}</h2>
           </div>
           <div className="dashboard-workspace__action-stack">
             <DashboardThemeSlider />
             <div className="dashboard-workspace__actions">
               <Link className="dashboard-action dashboard-action--link" to="/" target="_blank" rel="noreferrer">
-                <FiExternalLink aria-hidden /> View site
+                <FiExternalLink aria-hidden /> View public API
               </Link>
               <button className="dashboard-action" type="button" onClick={resetToDefaults}>
                 Reset
@@ -565,7 +565,7 @@ export function Dashboard() {
           <SummaryMetric label="Current slug" value={`/${selectedSite.slug || "new"}`} />
           <SummaryMetric label="Status" value={selectedSite.published ? "Published" : "Draft"} />
           <SummaryMetric label="Links" value={String(totalLinks)} />
-          <SummaryMetric label="Published records" value={String(publishedCount)} />
+          <SummaryMetric label="Published collections" value={String(publishedCount)} />
         </div>
 
         <div className="dashboard-workspace__panel">
@@ -658,9 +658,9 @@ function OverviewPanel({ selectedSite, saveMessage, saveError }: { selectedSite:
   return (
     <div className="dashboard-overview">
       <div>
-        <p className="dashboard-eyebrow">Current draft</p>
+        <p className="dashboard-eyebrow">Active collection</p>
         <h3>{selectedSite.title || "Untitled record"}</h3>
-        <p>{selectedSite.description || "Static site content lives in code. Use this dashboard for metadata, branding, links, users, records, and media."}</p>
+        <p>{selectedSite.description || "Use this dashboard for media metadata, branding, public collection records, and upload operations."}</p>
       </div>
       <div className="dashboard-preview">
         <div className="dashboard-preview__media">{selectedSite.heroImageUrl ? <img src={selectedSite.heroImageUrl} alt="" /> : <FiImage aria-hidden />}</div>
@@ -680,30 +680,30 @@ function StartGuidePanel() {
     <div className="start-guide-panel">
       <div>
         <p className="dashboard-eyebrow">Start here</p>
-        <h3>Template setup checklist</h3>
-        <p>Use this dashboard for the operational pieces of a project. Public page content is intentionally edited in code so each project can have static, versioned pages.</p>
+        <h3>ARCON launch checklist</h3>
+        <p>Bring the local CDN online, publish a collection record, and confirm consumers can read predictable API responses.</p>
       </div>
       <ol>
         <li>
-          <strong>Copy and rename:</strong> Copy the template into a new folder, rename the package names, then create a fresh git repository.
+          <strong>Configure secrets:</strong> Set `AUTH_MODE=admin-key`, choose a long `ADMIN_KEY`, and keep write operations behind `X-Admin-Key`.
         </li>
         <li>
-          <strong>Configure env:</strong> Copy `.env.example` to `.env`, choose `admin-key` or `better-auth`, and set database, email, storage, and security values.
+          <strong>Start storage:</strong> Run Postgres locally, choose `local` or `cloudinary` storage, and verify uploads produce original and thumbnail URLs.
         </li>
         <li>
-          <strong>Run the database:</strong> Start Postgres with `bun run db:up`, then run `cd apps/server && bunx drizzle-kit migrate`.
+          <strong>Publish a collection:</strong> Save a site record with a stable slug, title, metadata, and branding so public consumers can fetch it.
         </li>
         <li>
-          <strong>Set project identity:</strong> Edit `apps/web/src/shared/siteConfig.ts` for the site name, dashboard title, page-title format, and favicon.
+          <strong>Upload media:</strong> Add images or media files from the Uploads tab, then copy public URLs for downstream apps.
         </li>
         <li>
-          <strong>Build static pages:</strong> Add the real public content in React routes/components. Use `docs/page-setup-grid-layout.md` for the shared header, aside, main, and footer template.
+          <strong>Check consumers:</strong> Test `GET /api/sites`, `GET /api/sites/:slug`, and the generated media URLs from another app or browser.
         </li>
         <li>
-          <strong>Choose layout behavior:</strong> Use the Layout tab to switch asides between sticky viewport-height panels and page-scrolling panels.
+          <strong>Review API docs:</strong> Open `/docs` for Swagger UI and `/openapi.json` for client generation.
         </li>
         <li>
-          <strong>Verify the stack:</strong> Open `/docs` for API docs, run `bun run typecheck`, and run `bun run build` before handing off.
+          <strong>Verify release:</strong> Run `bun run typecheck`, `bun run build`, `/health`, dashboard unlock, upload, replace, delete, and public read checks.
         </li>
       </ol>
     </div>
@@ -1469,9 +1469,9 @@ function HelpPanel() {
   return (
     <div className="help-panel">
       <div>
-        <p className="dashboard-eyebrow">Support</p>
-        <h3>Setup and troubleshooting</h3>
-        <p>These are the first places to check when bringing the template into a new client or product project.</p>
+        <p className="dashboard-eyebrow">Developer</p>
+        <h3>API operations guide</h3>
+        <p>Use these checkpoints when integrating ARCON API Explorer with another app or promoting the CDN to production.</p>
       </div>
       <ol>
         <li>
@@ -1479,23 +1479,22 @@ function HelpPanel() {
           `bun run dev`.
         </li>
         <li>
-          <strong>Auth:</strong> Keep `AUTH_MODE=admin-key` for simple projects. Switch to `better-auth` when you need accounts, roles, password reset, and user
-          management.
+          <strong>Auth:</strong> Keep `AUTH_MODE=admin-key` for a single-operator CDN. Switch to `better-auth` only when multiple admins need accounts and roles.
         </li>
         <li>
-          <strong>Site identity:</strong> Change the site name, dashboard page title, page-title format, and favicon in `apps/web/src/shared/siteConfig.ts`.
+          <strong>Public reads:</strong> Consumers can fetch published collections through `GET /api/sites` and `GET /api/sites/:slug` without the admin key.
         </li>
         <li>
-          <strong>Static content:</strong> Public page copy and layout live in React code. This dashboard manages metadata, colors, links, users, records, and uploads.
+          <strong>Protected writes:</strong> Upload, replace, delete, and admin collection routes require `X-Admin-Key` or a valid Better Auth session.
         </li>
         <li>
-          <strong>Page template:</strong> Use `docs/page-setup-grid-layout.md` when adding new frontend pages. It includes the grid-template structure, class names, loading component, and final checks.
+          <strong>Response shape:</strong> API responses use <code>{"{ success, data, meta }"}</code> for success and <code>{"{ success, error, code, details }"}</code> for failures.
         </li>
         <li>
-          <strong>Layout settings:</strong> The Layout tab controls whether the public asides are static or scroll with the page for the current site record.
+          <strong>Storage:</strong> Use local storage for self-hosting or Cloudinary for production object storage. Replace/delete actions clean up old stored assets when metadata is available.
         </li>
         <li>
-          <strong>Uploads:</strong> Use local storage for development or Cloudinary for production. Replace/delete actions clean up old stored assets when metadata is available.
+          <strong>Tracing:</strong> Every response includes `X-Request-Id`; include it in client logs when investigating server errors.
         </li>
         <li>
           <strong>API reference:</strong> Open `http://localhost:3001/docs` for Swagger UI or `http://localhost:3001/openapi.json` for the OpenAPI document.
@@ -1599,7 +1598,7 @@ function DashboardAccessGate({
           <FiLock aria-hidden />
         </div>
         <span className="dashboard-eyebrow">Private dashboard</span>
-        <h1>Dashboard access</h1>
+        <h1>Control room access</h1>
         <div className="auth-preset-toggle" role="tablist" aria-label="Authentication presets">
           <button aria-selected={authPreset === "admin-key"} role="tab" type="button" onClick={() => setAuthPreset("admin-key")}>
             Admin key
@@ -1611,7 +1610,7 @@ function DashboardAccessGate({
 
         {authPreset === "admin-key" ? (
           <form className="dashboard-gate__form" onSubmit={submit}>
-            <p className="dashboard-note">Simple preset for small projects. Uses the server `ADMIN_KEY` and `X-Admin-Key` on protected requests.</p>
+            <p className="dashboard-note">Single-operator preset. Uses the server `ADMIN_KEY` and sends `X-Admin-Key` on protected media and collection requests.</p>
             <label>
               <span>Access code</span>
               <input autoComplete="current-password" autoFocus disabled={authIsChecking} onChange={(event) => setCode(event.target.value)} type="password" value={code} />
@@ -1625,8 +1624,8 @@ function DashboardAccessGate({
           <form className="dashboard-gate__form" onSubmit={(event) => void submitBetterAuth(event)}>
             <p className="dashboard-note">
               {signupMode === "public"
-                ? "Large-project preset. Public signup is enabled by server env."
-                : "Large-project preset. Signup is private by default, so admins create users from the dashboard."}
+                ? "Team preset. Public signup is enabled by server env."
+                : "Team preset. Signup is private by default, so admins create users from the dashboard."}
             </p>
             {signupMode === "public" ? (
               <div className="auth-intent-toggle" role="tablist" aria-label="Better Auth action">

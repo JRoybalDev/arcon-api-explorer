@@ -3,8 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 export type ThemeMode = "system" | "light" | "dark";
 type ResolvedTheme = "light" | "dark";
 
-const storageKey = "fullstack-template-theme";
-const themeChangeEvent = "fullstack-template-theme-change";
+const storageKey = "arcon-api-explorer-theme";
+const themeChangeEvent = "arcon-api-explorer-theme-change";
 
 export function useThemeMode() {
   const [mode, setModeState] = useState<ThemeMode>(() => {
@@ -13,7 +13,7 @@ export function useThemeMode() {
     }
 
     const saved = window.localStorage.getItem(storageKey);
-    return isThemeMode(saved) ? saved : "system";
+    return isThemeMode(saved) ? saved : "dark";
   });
 
   const [systemTheme, setSystemTheme] = useState<ResolvedTheme>(() => getSystemTheme());
@@ -31,7 +31,7 @@ export function useThemeMode() {
   useEffect(() => {
     const updateSavedTheme = () => {
       const saved = window.localStorage.getItem(storageKey);
-      setModeState(isThemeMode(saved) ? saved : "system");
+      setModeState(isThemeMode(saved) ? saved : "dark");
     };
 
     window.addEventListener("storage", updateSavedTheme);
