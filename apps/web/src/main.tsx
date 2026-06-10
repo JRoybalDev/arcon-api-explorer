@@ -12,6 +12,7 @@ import "./styles/index.css";
 import "./styles/public.css";
 import "./styles/dashboard-branding.css";
 import "./styles/dashboard.css";
+import Explorer from "./routes/Explorer";
 
 const queryClient = new QueryClient();
 
@@ -20,7 +21,7 @@ const router = createBrowserRouter([
     path: "/",
     element: <App />,
     children: [
-      { index: true, element: <PublicSite /> },
+      { index: true, element: <Explorer /> },
       { path: "dashboard", element: <Dashboard /> },
       { path: "reset-password", element: <ResetPassword /> },
       { path: "*", element: <NotFound /> }

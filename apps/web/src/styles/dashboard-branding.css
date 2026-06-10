@@ -9,9 +9,9 @@
   --dashboard-brand-panel: rgba(255, 252, 247, 0.96);
   --dashboard-brand-line: rgba(39, 33, 27, 0.12);
   --dashboard-brand-line-strong: #d8b48a;
-  --dashboard-brand-cyan: #8c6844;
-  --dashboard-brand-cyan-strong: #c4976e;
-  --dashboard-brand-cyan-soft: #d8b48a;
+  --dashboard-brand-cyan: #8c5d36;
+  --dashboard-brand-cyan-strong: #5f3a21;
+  --dashboard-brand-cyan-soft: #dfbd94;
   --dashboard-brand-coral: #a83f33;
   --dashboard-brand-coral-soft: #fff0e7;
   --dashboard-brand-success: #3f7b4b;
@@ -40,17 +40,17 @@
 :root[data-theme="dark"] .dashboard-gate,
 :root[data-theme="dark"] .dashboard-shell,
 :root[data-theme="dark"] .dashboard-mobile-nav__sheet {
-  --dashboard-brand-ink: #f3e6d8;
-  --dashboard-brand-graphite: #f3e6d8;
-  --dashboard-brand-slate: #d4b69f;
-  --dashboard-brand-canvas: #1b1411;
-  --dashboard-brand-paper: #3b2c24;
-  --dashboard-brand-panel: rgba(35, 24, 20, 0.92);
-  --dashboard-brand-line: rgba(255, 255, 255, 0.14);
-  --dashboard-brand-line-strong: #b78b5d;
-  --dashboard-brand-cyan: #c4976e;
-  --dashboard-brand-cyan-strong: #e8c09d;
-  --dashboard-brand-cyan-soft: #b78b5d;
+  --dashboard-brand-ink: #f7eadc;
+  --dashboard-brand-graphite: #ead7c1;
+  --dashboard-brand-slate: #c3a382;
+  --dashboard-brand-canvas: #0f0b09;
+  --dashboard-brand-paper: #2a2019;
+  --dashboard-brand-panel: rgba(29, 22, 18, 0.94);
+  --dashboard-brand-line: rgba(233, 204, 168, 0.12);
+  --dashboard-brand-line-strong: rgba(233, 204, 168, 0.24);
+  --dashboard-brand-cyan: #b98255;
+  --dashboard-brand-cyan-strong: #e0b07f;
+  --dashboard-brand-cyan-soft: #4a3528;
   --dashboard-brand-coral: #f09a8d;
   --dashboard-brand-coral-soft: #3b2c24;
   --dashboard-brand-success: #93d7a4;

@@ -6,6 +6,151 @@
   place-items: center;
 }
 
+.signin-shell {
+  align-content: center;
+  background:
+    linear-gradient(rgba(185, 130, 85, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(185, 130, 85, 0.04) 1px, transparent 1px),
+    radial-gradient(circle at 50% 42%, rgba(111, 70, 42, 0.2), transparent 22rem),
+    var(--app-bg);
+  background-size:
+    48px 48px,
+    48px 48px,
+    auto,
+    auto;
+  color: var(--app-text);
+  display: grid;
+  justify-items: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.signin-brand {
+  align-items: center;
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+  margin-bottom: 36px;
+  text-align: center;
+}
+
+.signin-brand__mark {
+  align-items: center;
+  background: rgba(185, 130, 85, 0.12);
+  border: 1px solid rgba(224, 176, 127, 0.28);
+  border-radius: 5px;
+  color: var(--app-accent-strong);
+  display: inline-flex;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
+}
+
+.signin-brand__mark svg {
+  fill: none;
+  height: 23px;
+  stroke: currentColor;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+  width: 23px;
+}
+
+.signin-brand h1 {
+  color: var(--app-heading);
+  font-size: 1.55rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  margin: 0;
+}
+
+.signin-brand p,
+.signin-card label span,
+.signin-disclaimer {
+  color: color-mix(in srgb, var(--app-muted) 76%, transparent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.28em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.signin-card {
+  background: rgba(29, 22, 18, 0.74);
+  border: 1px solid rgba(233, 204, 168, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.34);
+  display: grid;
+  gap: 18px;
+  padding: 31px 30px 30px;
+  width: min(100%, 360px);
+}
+
+.signin-card label {
+  display: grid;
+  gap: 12px;
+}
+
+.signin-input-wrap {
+  background: rgba(42, 32, 25, 0.74);
+  border: 1px solid rgba(233, 204, 168, 0.14);
+  border-radius: 7px;
+  min-height: 46px;
+}
+
+.signin-card input {
+  background: transparent;
+  border: 0;
+  color: var(--app-heading);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.95rem;
+  height: 46px;
+  letter-spacing: 0.16em;
+  outline: 0;
+  padding: 0 15px;
+  width: 100%;
+}
+
+.signin-card input::placeholder {
+  color: color-mix(in srgb, var(--app-muted) 82%, transparent);
+}
+
+.signin-input-wrap:focus-within {
+  border-color: rgba(224, 176, 127, 0.54);
+  box-shadow: 0 0 0 3px rgba(185, 130, 85, 0.16);
+}
+
+.signin-card button {
+  background: rgba(185, 130, 85, 0.18);
+  border: 1px solid rgba(224, 176, 127, 0.34);
+  border-radius: 7px;
+  color: var(--app-accent-strong);
+  cursor: pointer;
+  font-weight: 800;
+  min-height: 44px;
+}
+
+.signin-card button:hover:not(:disabled) {
+  background: rgba(185, 130, 85, 0.26);
+  border-color: rgba(224, 176, 127, 0.5);
+}
+
+.signin-card button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.signin-error {
+  color: var(--app-danger);
+  font-size: 0.82rem;
+  margin: -4px 0 0;
+}
+
+.signin-disclaimer {
+  letter-spacing: 0.2em;
+  margin-top: 22px;
+}
+
 .dashboard-gate__panel {
   background: var(--app-surface);
   border: 1px solid var(--app-border);

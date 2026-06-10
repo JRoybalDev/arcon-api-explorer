@@ -71,41 +71,6 @@ export function App() {
 
   return (
     <div className={shellClassName}>
-      {!isDashboard ? (
-        <motion.header animate={topbarControls} className={isTopbarScrolled ? "topbar grid-area-header" : "topbar grid-area-header"}>
-          <a className="brand" href="/">
-            ARCON API Explorer
-          </a>
-          <div className="topbar-actions">
-            <nav className="nav-links" aria-label="Primary">
-              <NavLink to="/">
-                <FiHome aria-hidden /> Public
-              </NavLink>
-              <NavLink to="/dashboard">
-                <FiGrid aria-hidden /> Dashboard
-              </NavLink>
-            </nav>
-            <div className="theme-switcher" aria-label={`Theme selector, currently ${resolvedTheme}`}>
-              {themeOptions.map((option) => {
-                const Icon = option.icon;
-                return (
-                  <button
-                    aria-label={option.label}
-                    aria-pressed={mode === option.mode}
-                    className={mode === option.mode ? "active" : ""}
-                    key={option.mode}
-                    onClick={() => setMode(option.mode)}
-                    title={option.label}
-                    type="button"
-                  >
-                    <Icon aria-hidden />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </motion.header>
-      ) : null}
       {isDashboard ? (
         <main className={mainClassName}>
           <Outlet />
