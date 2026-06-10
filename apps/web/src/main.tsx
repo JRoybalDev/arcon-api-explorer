@@ -12,6 +12,7 @@ import "./styles/index.css";
 import "./styles/public.css";
 import "./styles/dashboard-branding.css";
 import "./styles/dashboard.css";
+import "./styles/explorer.css";
 import Explorer from "./routes/Explorer";
 
 const queryClient = new QueryClient();
