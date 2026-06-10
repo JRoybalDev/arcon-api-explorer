@@ -1,10 +1,10 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: fullstack-template-db
+    container_name: arcon-api-explorer-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: fullstack_template
+      POSTGRES_DB: arcon-api-explorer-db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
@@ -12,7 +12,7 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d fullstack_template"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d arcon-api-explorer-db"]
       interval: 5s
       timeout: 5s
       retries: 10

@@ -3,7 +3,8 @@ dist
 .env
 .env.local
 .DS_Store
-uploads
+/uploads/
+/apps/server/uploads/
 *.log
 .vite
 .vercel
