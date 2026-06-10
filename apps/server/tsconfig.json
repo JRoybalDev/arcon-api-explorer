@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@fullstack-template/schema": ["../../packages/schema/src/index.ts"]
+    }
+  },
+  "include": ["src", "db", "drizzle.config.ts"]
+}

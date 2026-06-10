@@ -1,0 +1,208 @@
+.public-page {
+  --public-page-padding: var(--template-page-padding, clamp(24px, 5vw, 64px));
+  --page-gap: clamp(18px, 3vw, 36px);
+  --static-aside-height: calc(100vh - var(--template-header-height, 76px) - (var(--template-header-offset, 0px) * 2));
+  --static-aside-top: calc(var(--template-header-height, 76px) + var(--template-header-offset, 0px));
+  --template-body-min-height: 100vh;
+  align-items: stretch;
+  display: grid;
+  gap: var(--page-gap);
+  padding: var(--template-header-offset, var(--public-page-padding)) var(--public-page-padding) var(--public-page-padding);
+}
+
+.public-hero {
+  align-items: center;
+  border-bottom: 1px solid var(--app-border);
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  min-height: 0;
+  padding-bottom: 22px;
+}
+
+.public-hero-copy {
+  max-width: 760px;
+}
+
+.public-hero h1 {
+  color: var(--app-heading);
+  font-size: clamp(2.25rem, 5vw, 4.2rem);
+  line-height: 0.98;
+  margin: 16px 0;
+}
+
+.public-hero p {
+  color: var(--app-muted);
+  font-size: 1.12rem;
+  line-height: 1.7;
+  max-width: 680px;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 26px;
+}
+
+.hero-image {
+  aspect-ratio: 4 / 5;
+  border-radius: 8px;
+  height: auto;
+  object-fit: cover;
+  width: 100%;
+}
+
+.site-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  margin-top: 0;
+}
+
+.site-card,
+.public-empty {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  padding: 22px;
+}
+
+.site-card h2 {
+  color: var(--app-heading);
+  font-size: 1.35rem;
+  margin: 8px 0;
+}
+
+.site-card p {
+  color: var(--app-muted);
+  line-height: 1.6;
+}
+
+.site-slug {
+  color: var(--app-accent);
+  font-weight: 800;
+  margin: 0;
+}
+
+.site-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.site-links a {
+  background: var(--app-surface-accent);
+  border-radius: 8px;
+  color: var(--app-accent-strong);
+  padding: 8px 10px;
+}
+
+.template-section {
+  align-content: start;
+  align-self: stretch;
+  background: color-mix(in srgb, var(--app-surface) 92%, transparent);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+}
+
+.template-aside {
+  align-content: start;
+}
+
+.frontend-template-grid--asides-scroll .template-aside {
+  align-self: stretch;
+  min-height: 100%;
+  overflow: visible;
+}
+
+.frontend-template-grid--asides-static .template-aside {
+  align-self: start;
+  height: var(--static-aside-height);
+  overflow: hidden;
+  position: sticky;
+  top: var(--static-aside-top);
+}
+
+.template-section h2 {
+  color: var(--app-heading);
+  font-size: 1.35rem;
+  margin: 0;
+}
+
+.template-section p {
+  color: var(--app-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.template-section__label {
+  align-self: start;
+  background: var(--app-surface-accent);
+  border: 1px solid var(--app-border-accent);
+  border-radius: 8px;
+  color: var(--app-accent);
+  font-size: 0.76rem;
+  font-weight: 900;
+  justify-self: start;
+  letter-spacing: 0;
+  padding: 5px 8px;
+  text-transform: uppercase;
+}
+
+.template-placeholder-list {
+  display: grid;
+  gap: 8px;
+}
+
+.template-placeholder-list span {
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  color: var(--app-muted);
+  font-size: 0.9rem;
+  font-weight: 750;
+  padding: 10px;
+}
+
+.aside-stat-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.aside-stat-grid div {
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+}
+
+.aside-stat-grid strong {
+  color: var(--app-heading);
+  font-size: 1.35rem;
+}
+
+.aside-stat-grid span {
+  color: var(--app-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+@media (max-width: 820px) {
+  .template-aside {
+    height: auto;
+    overflow: visible;
+  }
+
+  .public-hero {
+    grid-template-columns: 1fr;
+  }
+}

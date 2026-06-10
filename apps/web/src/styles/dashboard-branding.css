@@ -1,0 +1,58 @@
+.dashboard-gate,
+.dashboard-shell,
+.dashboard-mobile-nav__sheet {
+  --dashboard-brand-ink: #27211b;
+  --dashboard-brand-graphite: #3a2f26;
+  --dashboard-brand-slate: #7f5a3b;
+  --dashboard-brand-canvas: #f7ede2;
+  --dashboard-brand-paper: #e7d4bb;
+  --dashboard-brand-panel: rgba(255, 252, 247, 0.96);
+  --dashboard-brand-line: rgba(39, 33, 27, 0.12);
+  --dashboard-brand-line-strong: #d8b48a;
+  --dashboard-brand-cyan: #8c6844;
+  --dashboard-brand-cyan-strong: #c4976e;
+  --dashboard-brand-cyan-soft: #d8b48a;
+  --dashboard-brand-coral: #a83f33;
+  --dashboard-brand-coral-soft: #fff0e7;
+  --dashboard-brand-success: #3f7b4b;
+  --dashboard-brand-shadow: rgba(15, 23, 42, 0.08);
+
+  --app-bg: var(--dashboard-brand-canvas);
+  --app-surface: var(--dashboard-brand-panel);
+  --app-surface-muted: var(--dashboard-brand-paper);
+  --app-surface-accent: var(--dashboard-brand-cyan-soft);
+  --app-surface-danger: var(--dashboard-brand-coral-soft);
+  --app-border: var(--dashboard-brand-line);
+  --app-border-strong: var(--dashboard-brand-line-strong);
+  --app-border-accent: color-mix(in srgb, var(--dashboard-brand-cyan) 34%, var(--dashboard-brand-line));
+  --app-border-danger: color-mix(in srgb, var(--dashboard-brand-coral) 36%, var(--dashboard-brand-line));
+  --app-text: var(--dashboard-brand-graphite);
+  --app-heading: var(--dashboard-brand-ink);
+  --app-muted: var(--dashboard-brand-slate);
+  --app-nav: var(--dashboard-brand-slate);
+  --app-accent: var(--dashboard-brand-cyan);
+  --app-accent-strong: var(--dashboard-brand-cyan-strong);
+  --app-accent-text: var(--dashboard-brand-ink);
+  --app-nav-active: var(--dashboard-brand-cyan-soft);
+  --app-danger: var(--dashboard-brand-coral);
+}
+
+:root[data-theme="dark"] .dashboard-gate,
+:root[data-theme="dark"] .dashboard-shell,
+:root[data-theme="dark"] .dashboard-mobile-nav__sheet {
+  --dashboard-brand-ink: #f3e6d8;
+  --dashboard-brand-graphite: #f3e6d8;
+  --dashboard-brand-slate: #d4b69f;
+  --dashboard-brand-canvas: #1b1411;
+  --dashboard-brand-paper: #3b2c24;
+  --dashboard-brand-panel: rgba(35, 24, 20, 0.92);
+  --dashboard-brand-line: rgba(255, 255, 255, 0.14);
+  --dashboard-brand-line-strong: #b78b5d;
+  --dashboard-brand-cyan: #c4976e;
+  --dashboard-brand-cyan-strong: #e8c09d;
+  --dashboard-brand-cyan-soft: #b78b5d;
+  --dashboard-brand-coral: #f09a8d;
+  --dashboard-brand-coral-soft: #3b2c24;
+  --dashboard-brand-success: #93d7a4;
+  --dashboard-brand-shadow: rgba(0, 0, 0, 0.34);
+}

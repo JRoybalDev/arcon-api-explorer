@@ -1,0 +1,76 @@
+:root {
+  color-scheme: light;
+
+  --brand-font-sans:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  --brand-white: #ffffff;
+  --brand-ink-950: #101828;
+  --brand-ink-900: #18212f;
+  --brand-ink-700: #445064;
+  --brand-ink-600: #536173;
+  --brand-paper-50: #f8fafc;
+  --brand-paper-100: #f7f7f2;
+  --brand-paper-200: #eef6f7;
+  --brand-paper-300: #e7f0e8;
+  --brand-border-100: #deded2;
+  --brand-border-200: #c9c9bd;
+  --brand-teal-700: #006d77;
+  --brand-teal-800: #005f69;
+  --brand-green-900: #193926;
+  --brand-indigo-600: #635bff;
+  --brand-red-50: #fff1f1;
+  --brand-red-200: #f1c5c5;
+  --brand-red-700: #b42318;
+
+  --app-bg: var(--brand-paper-100);
+  --app-surface: var(--brand-white);
+  --app-surface-muted: var(--brand-paper-50);
+  --app-surface-accent: var(--brand-paper-200);
+  --app-surface-danger: var(--brand-red-50);
+  --app-border: var(--brand-border-100);
+  --app-border-strong: var(--brand-border-200);
+  --app-border-accent: #c7dde0;
+  --app-border-danger: var(--brand-red-200);
+  --app-text: var(--brand-ink-900);
+  --app-heading: var(--brand-ink-950);
+  --app-muted: var(--brand-ink-600);
+  --app-nav: var(--brand-ink-700);
+  --app-accent: var(--brand-teal-700);
+  --app-accent-strong: var(--brand-teal-800);
+  --app-accent-text: var(--brand-green-900);
+  --app-button-primary: var(--brand-indigo-600);
+  --app-button-primary-text: var(--brand-white);
+  --app-button-secondary: var(--app-surface-accent);
+  --app-button-secondary-border: var(--app-border-accent);
+  --app-button-secondary-text: var(--app-accent-strong);
+  --app-nav-active: var(--brand-paper-300);
+  --app-danger: var(--brand-red-700);
+  --app-topbar: rgba(247, 247, 242, 0.92);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --brand-white: #191f27;
+  --brand-ink-950: #f7fafc;
+  --brand-ink-900: #e8edf3;
+  --brand-ink-700: #c6d0dd;
+  --brand-ink-600: #aab6c5;
+  --brand-paper-50: #202833;
+  --brand-paper-100: #111418;
+  --brand-paper-200: #16333a;
+  --brand-paper-300: #18382f;
+  --brand-border-100: #2c3440;
+  --brand-border-200: #435061;
+  --brand-teal-700: #55c8d6;
+  --brand-teal-800: #9de4ec;
+  --brand-green-900: #d6fbef;
+  --brand-indigo-600: #7c73ff;
+  --brand-red-50: #3a2020;
+  --brand-red-200: #6f3535;
+  --brand-red-700: #ff9b8f;
+
+  --app-border-accent: #2b6871;
+  --app-topbar: rgba(17, 20, 24, 0.92);
+}
