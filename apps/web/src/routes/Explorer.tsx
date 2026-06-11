@@ -3,7 +3,7 @@ import { ContentArea } from "../components/explorer/ContentArea";
 import { Directory } from "../components/explorer/Directory";
 import { inferContentType, UploadModal, type UploadModalSubmitInput } from "../components/explorer/UploadModal";
 import { explorerFolders, sampleExplorerFiles } from "../components/explorer/mockExplorerData";
-import { type ExplorerFile, type ExplorerFilter, type ExplorerSort, type ExplorerView, uploadToExplorerFile } from "../components/explorer/types";
+import { type ExplorerFile, type ExplorerFilter, type ExplorerFolder, type ExplorerSort, type ExplorerView, uploadToExplorerFile } from "../components/explorer/types";
 import { apiClient } from "../shared/apiClient";
 import { LoadingScreen } from "../shared/Loading";
 import { useAdminSession } from "../shared/useAdminSession";
@@ -20,6 +20,7 @@ function Explorer() {
     const [filter, setFilter] = useState<ExplorerFilter>("all");
     const [loopEnabled, setLoopEnabled] = useState(false);
     const [localFiles, setLocalFiles] = useState<ExplorerFile[]>([]);
+    const [localFolders, setLocalFolders] = useState<ExplorerFolder[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
     const [shuffleSeed, setShuffleSeed] = useState(0);
@@ -42,26 +43,16 @@ function Explorer() {
         mutationFn: uploadExplorerMedia
     });
 
+    const allFolders = useMemo(() => [...explorerFolders, ...localFolders], [localFolders]);
+
     const activeFolder = useMemo(
-        () => explorerFolders.find((folder) => folder.id === activeFolderId) ?? null,
-        [activeFolderId]
+        () => allFolders.find((folder) => folder.id === activeFolderId) ?? null,
+        [activeFolderId, allFolders]
     );
 
-    const folderPath = useMemo(() => {
-        const path = [];
-        let currentFolder = activeFolder;
-
-        while (currentFolder) {
-            path.unshift(currentFolder);
-            currentFolder = explorerFolders.find((folder) => folder.id === currentFolder?.parentId) ?? null;
-        }
-
-        return path;
-    }, [activeFolder]);
-
     const visibleFolders = useMemo(
-        () => explorerFolders.filter((folder) => folder.parentId === activeFolderId),
-        [activeFolderId]
+        () => allFolders.filter((folder) => folder.parentId === activeFolderId),
+        [activeFolderId, allFolders]
     );
 
     const allFiles = useMemo<ExplorerFile[]>(() => {
@@ -115,6 +106,14 @@ function Explorer() {
         setSelectedFileId(null);
     }
 
+    function goUpOneFolder() {
+        if (!activeFolder) {
+            return;
+        }
+
+        selectFolder(activeFolder.parentId);
+    }
+
     function shuffleVisibleFiles() {
         setShuffleSeed((current) => current + 1);
     }
@@ -132,6 +131,26 @@ function Explorer() {
 
     function toggleFavorite(fileId: string) {
         setFavoriteIds((current) => (current.includes(fileId) ? current.filter((id) => id !== fileId) : [...current, fileId]));
+    }
+
+    function createFolder() {
+        const folderName = window.prompt("Folder name");
+
+        if (!folderName?.trim()) {
+            return;
+        }
+
+        const name = folderName.trim();
+        setLocalFolders((current) => [
+            ...current,
+            {
+                id: `folder-${crypto.randomUUID()}`,
+                name,
+                count: 0,
+                parentId: activeFolderId,
+                coverUrl: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=900&q=80"
+            }
+        ]);
     }
 
     async function uploadExplorerMedia(input: UploadModalSubmitInput) {
@@ -178,11 +197,11 @@ function Explorer() {
         <section className="explorer-shell page-full">
             <Directory
                 activeFolderId={activeFolderId}
-                folders={explorerFolders}
+                folders={allFolders}
                 onFolderSelect={selectFolder}
                 storageTotal={180_000_000_000}
                 storageUsed={allFiles.reduce((total, file) => total + file.size, 0)}
-                totalItems={explorerFolders.length + allFiles.length}
+                totalItems={allFolders.length + allFiles.length}
             />
             <ContentArea
                 activeFolder={activeFolder}
@@ -190,15 +209,15 @@ function Explorer() {
                 favoriteIds={favoriteIds}
                 files={visibleFiles}
                 filter={filter}
-                folderPath={folderPath}
                 folders={visibleFolders}
                 isLoadingFiles={uploads.isLoading}
                 loopEnabled={loopEnabled}
                 onAutoToggle={() => setAutoEnabled((current) => !current)}
                 onFavoriteToggle={toggleFavorite}
+                onFolderBack={goUpOneFolder}
                 onFilterChange={setFilter}
+                onFolderCreate={createFolder}
                 onFolderOpen={selectFolder}
-                onHomeOpen={() => selectFolder(null)}
                 onLock={lockDashboard}
                 onLoopToggle={() => setLoopEnabled((current) => !current)}
                 onModalClose={() => setSelectedFileId(null)}
@@ -217,7 +236,7 @@ function Explorer() {
             {uploadModalOpen ? (
                 <UploadModal
                     currentFolderId={activeFolderId}
-                    folders={explorerFolders}
+                    folders={allFolders}
                     isUploading={uploadMedia.isPending}
                     onClose={() => setUploadModalOpen(false)}
                     onSubmit={(input) => uploadMedia.mutateAsync(input)}
