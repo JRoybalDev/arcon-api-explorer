@@ -1,4 +1,4 @@
-import { FiGrid, FiList, FiSearch, FiShuffle } from "react-icons/fi";
+import { FiColumns, FiList, FiMaximize, FiSearch, FiSquare } from "react-icons/fi";
 import type { ExplorerFilter, ExplorerSort, ExplorerView } from "./types";
 
 type FiltersSearchProps = {
@@ -7,9 +7,7 @@ type FiltersSearchProps = {
   sort: ExplorerSort;
   view: ExplorerView;
   onFilterChange: (filter: ExplorerFilter) => void;
-  onRandomFile: () => void;
   onSearchChange: (query: string) => void;
-  onShuffleFiles: () => void;
   onSortChange: (sort: ExplorerSort) => void;
   onViewChange: (view: ExplorerView) => void;
 };
@@ -26,9 +24,7 @@ export function FiltersSearch({
   sort,
   view,
   onFilterChange,
-  onRandomFile,
   onSearchChange,
-  onShuffleFiles,
   onSortChange,
   onViewChange
 }: FiltersSearchProps) {
@@ -55,26 +51,17 @@ export function FiltersSearch({
       </label>
 
       <div className="explorer-view-toggle" aria-label="View mode">
-        <button aria-pressed={view === "small"} type="button" onClick={() => onViewChange("small")} title="Small grid">
-          <FiGrid aria-hidden />
+        <button aria-pressed={view === "small"} type="button" onClick={() => onViewChange("small")} title="Square cards">
+          <FiSquare aria-hidden />
         </button>
-        <button aria-pressed={view === "medium"} type="button" onClick={() => onViewChange("medium")} title="Medium grid">
-          <FiGrid aria-hidden />
+        <button aria-pressed={view === "medium"} type="button" onClick={() => onViewChange("medium")} title="Rectangular cards">
+          <FiColumns aria-hidden />
         </button>
-        <button aria-pressed={view === "large"} type="button" onClick={() => onViewChange("large")} title="Large grid">
-          <FiGrid aria-hidden />
+        <button aria-pressed={view === "large"} type="button" onClick={() => onViewChange("large")} title="Large rectangular cards">
+          <FiMaximize aria-hidden />
         </button>
         <button aria-pressed={view === "list"} type="button" onClick={() => onViewChange("list")} title="List view">
           <FiList aria-hidden />
-        </button>
-      </div>
-
-      <div className="explorer-action-toggle" aria-label="File actions">
-        <button type="button" onClick={onShuffleFiles} title="Shuffle files">
-          <FiShuffle aria-hidden />
-        </button>
-        <button type="button" onClick={onRandomFile}>
-          Random
         </button>
       </div>
     </div>

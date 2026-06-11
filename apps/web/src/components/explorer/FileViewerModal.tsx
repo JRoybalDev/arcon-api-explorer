@@ -1,4 +1,5 @@
 import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { FiCopy, FiExternalLink, FiHeart, FiMaximize2, FiPauseCircle, FiPlayCircle, FiRefreshCw, FiShuffle, FiSkipBack, FiSkipForward, FiX } from "react-icons/fi";
 import type { ExplorerFile } from "./types";
 
@@ -120,12 +121,12 @@ export function FileViewerModal({
     await targetRef.current?.requestFullscreen?.();
   }
 
-  function openPopout() {
+  function openOriginal() {
     window.open(file.url, "_blank", "noopener,noreferrer,width=1200,height=800");
   }
 
   return (
-    <div className="explorer-viewer" role="dialog" aria-modal="true" aria-label={`${file.name} preview`}>
+    <motion.div className="explorer-viewer" role="dialog" aria-modal="true" aria-label={`${file.name} preview`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.18 }}>
       <div className="explorer-viewer__counter">
         {currentIndex + 1} / {files.length}
       </div>
@@ -140,13 +141,24 @@ export function FileViewerModal({
         <FiSkipForward aria-hidden />
       </button>
 
-      <div className="explorer-viewer__stage" ref={stageRef}>
+      <motion.div
+        className="explorer-viewer__stage"
+        ref={stageRef}
+        initial={{ opacity: 0, scale: 0.985 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+      >
         {isImage ? <img alt="" src={file.previewUrl || file.url} /> : null}
         {isVideo ? <video ref={videoRef} controls loop={loopEnabled && !autoEnabled} src={file.url} onEnded={handleVideoEnded} /> : null}
         {!isImage && !isVideo ? <a href={file.url}>Open file</a> : null}
-      </div>
+      </motion.div>
 
-      <aside className="explorer-viewer__details">
+      <motion.aside
+        className="explorer-viewer__details"
+        initial={{ opacity: 0, x: 16 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+      >
         <div>
           <h2>{file.name}</h2>
           <span>{isVideo ? "Video" : isImage ? "Image" : "File"}</span>
@@ -180,8 +192,8 @@ export function FileViewerModal({
           <button type="button" onClick={() => void enterFullscreen(stageRef)} title="Fullscreen">
             <FiMaximize2 aria-hidden /> Fullscreen
           </button>
-          <button type="button" onClick={openPopout} title="Open in popout">
-            <FiExternalLink aria-hidden /> Popout
+          <button type="button" onClick={openOriginal} title="Open original">
+            <FiExternalLink aria-hidden /> Open
           </button>
           {isVideo ? (
             <button aria-pressed={loopEnabled} type="button" onClick={onLoopToggle} title="Loop video">
@@ -194,15 +206,12 @@ export function FileViewerModal({
         </div>
 
         <div className="explorer-viewer__links">
-          <a href={file.url} target="_blank" rel="noreferrer">
-            <FiExternalLink aria-hidden /> Open original
-          </a>
           <button type="button" onClick={() => void copyUrl()}>
             <FiCopy aria-hidden /> Copy URL
           </button>
         </div>
-      </aside>
-    </div>
+      </motion.aside>
+    </motion.div>
   );
 }
 

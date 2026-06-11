@@ -11,6 +11,7 @@ type ContentAreaProps = {
   favoriteIds: string[];
   files: ExplorerFile[];
   filter: ExplorerFilter;
+  folderPath: ExplorerFolder[];
   folders: ExplorerFolder[];
   isLoadingFiles: boolean;
   loopEnabled: boolean;
@@ -22,6 +23,7 @@ type ContentAreaProps = {
   onFavoriteToggle: (fileId: string) => void;
   onFilterChange: (filter: ExplorerFilter) => void;
   onFolderOpen: (folderId: string) => void;
+  onHomeOpen: () => void;
   onLock: () => void;
   onLoopToggle: () => void;
   onModalClose: () => void;
@@ -30,6 +32,7 @@ type ContentAreaProps = {
   onSearchChange: (query: string) => void;
   onShuffleFiles: () => void;
   onSortChange: (sort: ExplorerSort) => void;
+  onUploadOpen: () => void;
   onViewChange: (view: ExplorerView) => void;
 };
 
@@ -39,6 +42,7 @@ export function ContentArea({
   favoriteIds,
   files,
   filter,
+  folderPath,
   folders,
   isLoadingFiles,
   loopEnabled,
@@ -50,6 +54,7 @@ export function ContentArea({
   onFavoriteToggle,
   onFilterChange,
   onFolderOpen,
+  onHomeOpen,
   onLock,
   onLoopToggle,
   onModalClose,
@@ -58,6 +63,7 @@ export function ContentArea({
   onSearchChange,
   onShuffleFiles,
   onSortChange,
+  onUploadOpen,
   onViewChange
 }: ContentAreaProps) {
   const visibleFolderCount = activeFolder ? 0 : folders.length;
@@ -68,16 +74,28 @@ export function ContentArea({
       <header className="explorer-topbar">
         <div className="explorer-breadcrumb">
           <FiHome aria-hidden />
-          <span>Home</span>
-          {activeFolder ? (
-            <>
-              <FiChevronRight aria-hidden />
-              <strong>{activeFolder.name}</strong>
-            </>
-          ) : null}
+          <button type="button" onClick={onHomeOpen}>
+            Home
+          </button>
+          {folderPath.map((folder, index) => {
+            const isCurrentFolder = index === folderPath.length - 1;
+
+            return (
+              <span className="explorer-breadcrumb__item" key={folder.id}>
+                <FiChevronRight aria-hidden />
+                {isCurrentFolder ? (
+                  <strong>{folder.name}</strong>
+                ) : (
+                  <button type="button" onClick={() => onFolderOpen(folder.id)}>
+                    {folder.name}
+                  </button>
+                )}
+              </span>
+            );
+          })}
         </div>
         <div className="explorer-topbar__actions">
-          <button className="explorer-upload-button" type="button">
+          <button className="explorer-upload-button" type="button" onClick={onUploadOpen}>
             <FiUpload aria-hidden /> Upload
           </button>
           <button className="explorer-icon-button" type="button" onClick={onLock} title="Lock explorer" aria-label="Lock explorer">
@@ -89,9 +107,7 @@ export function ContentArea({
       <FiltersSearch
         filter={filter}
         onFilterChange={onFilterChange}
-        onRandomFile={onRandomFile}
         onSearchChange={onSearchChange}
-        onShuffleFiles={onShuffleFiles}
         onSortChange={onSortChange}
         onViewChange={onViewChange}
         searchQuery={searchQuery}

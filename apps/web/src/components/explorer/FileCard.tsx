@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { FiFileText, FiImage, FiVideo } from "react-icons/fi";
 import type { ExplorerFile } from "./types";
 
@@ -11,9 +12,18 @@ export function FileCard({ file, view, onOpen }: FileCardProps) {
   const isImage = file.contentType.startsWith("image/");
   const isVideo = file.contentType.startsWith("video/");
   const Icon = isImage ? FiImage : isVideo ? FiVideo : FiFileText;
+  const isList = view === "list";
 
   return (
-    <article className={view === "list" ? "explorer-file-card explorer-file-card--list" : "explorer-file-card"}>
+    <motion.article
+      className={isList ? "explorer-file-card explorer-file-card--list" : "explorer-file-card"}
+      initial={{ opacity: 0, y: isList ? 4 : 10 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "32px" }}
+      whileHover={isList ? { x: 3 } : { y: -3, scale: 1.01 }}
+      transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+      layout
+    >
       <button className="explorer-file-card__preview" type="button" onClick={() => onOpen(file.id)}>
         {isImage ? <img alt="" src={file.previewUrl} /> : null}
         {isVideo ? <video muted playsInline src={file.url} /> : null}
@@ -32,7 +42,7 @@ export function FileCard({ file, view, onOpen }: FileCardProps) {
           <span>{formatDate(file.createdAt)}</span>
         </>
       ) : null}
-    </article>
+    </motion.article>
   );
 }
 

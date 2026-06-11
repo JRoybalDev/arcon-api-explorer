@@ -49,6 +49,20 @@ export const explorerFolders: ExplorerFolder[] = [
     count: 3,
     parentId: "architecture",
     coverUrl: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=900&q=80"
+  },
+  {
+    id: "rooftops",
+    name: "Rooftops",
+    count: 3,
+    parentId: "night-shots",
+    coverUrl: "https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&w=900&q=80"
+  },
+  {
+    id: "long-exposure",
+    name: "Long Exposure",
+    count: 2,
+    parentId: "rooftops",
+    coverUrl: "https://images.unsplash.com/photo-1493246507139-91e8fad9978e?auto=format&fit=crop&w=900&q=80"
   }
 ];
 

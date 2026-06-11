@@ -1,12 +1,13 @@
 import SignIn from "../components/SignIn";
 import { ContentArea } from "../components/explorer/ContentArea";
 import { Directory } from "../components/explorer/Directory";
+import { inferContentType, UploadModal, type UploadModalSubmitInput } from "../components/explorer/UploadModal";
 import { explorerFolders, sampleExplorerFiles } from "../components/explorer/mockExplorerData";
 import { type ExplorerFile, type ExplorerFilter, type ExplorerSort, type ExplorerView, uploadToExplorerFile } from "../components/explorer/types";
 import { apiClient } from "../shared/apiClient";
 import { LoadingScreen } from "../shared/Loading";
 import { useAdminSession } from "../shared/useAdminSession";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { setDocumentTitle } from "../shared/siteConfig";
 
@@ -18,10 +19,12 @@ function Explorer() {
     const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
     const [filter, setFilter] = useState<ExplorerFilter>("all");
     const [loopEnabled, setLoopEnabled] = useState(false);
+    const [localFiles, setLocalFiles] = useState<ExplorerFile[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
     const [shuffleSeed, setShuffleSeed] = useState(0);
     const [sort, setSort] = useState<ExplorerSort>("newest");
+    const [uploadModalOpen, setUploadModalOpen] = useState(false);
     const [view, setView] = useState<ExplorerView>("medium");
 
     useEffect(() => {
@@ -35,10 +38,26 @@ function Explorer() {
         retry: false
     });
 
+    const uploadMedia = useMutation({
+        mutationFn: uploadExplorerMedia
+    });
+
     const activeFolder = useMemo(
         () => explorerFolders.find((folder) => folder.id === activeFolderId) ?? null,
         [activeFolderId]
     );
+
+    const folderPath = useMemo(() => {
+        const path = [];
+        let currentFolder = activeFolder;
+
+        while (currentFolder) {
+            path.unshift(currentFolder);
+            currentFolder = explorerFolders.find((folder) => folder.id === currentFolder?.parentId) ?? null;
+        }
+
+        return path;
+    }, [activeFolder]);
 
     const visibleFolders = useMemo(
         () => explorerFolders.filter((folder) => folder.parentId === activeFolderId),
@@ -47,8 +66,8 @@ function Explorer() {
 
     const allFiles = useMemo<ExplorerFile[]>(() => {
         const uploadedFiles = uploads.data?.map(uploadToExplorerFile) ?? [];
-        return [...sampleExplorerFiles, ...uploadedFiles];
-    }, [uploads.data]);
+        return [...sampleExplorerFiles, ...uploadedFiles, ...localFiles];
+    }, [localFiles, uploads.data]);
 
     const visibleFiles = useMemo(() => {
         const query = searchQuery.trim().toLowerCase();
@@ -115,6 +134,33 @@ function Explorer() {
         setFavoriteIds((current) => (current.includes(fileId) ? current.filter((id) => id !== fileId) : [...current, fileId]));
     }
 
+    async function uploadExplorerMedia(input: UploadModalSubmitInput) {
+        const uploadedFiles = await Promise.all(
+            input.files.map(async (file) => {
+                const upload = await apiClient.uploads.create(adminSession.adminKey, file);
+                return {
+                    ...uploadToExplorerFile(upload),
+                    folderId: input.folderId
+                };
+            })
+        );
+
+        const remoteFiles = input.remoteItems.map<ExplorerFile>((item) => ({
+            id: item.id,
+            name: item.title || item.url,
+            contentType: inferContentType(item.url),
+            createdAt: new Date().toISOString(),
+            folderId: input.folderId,
+            previewUrl: item.thumbnailUrl || item.url,
+            size: 0,
+            tags: [],
+            url: item.url
+        }));
+
+        setLocalFiles((current) => [...remoteFiles, ...uploadedFiles, ...current]);
+        setUploadModalOpen(false);
+    }
+
     if (!adminSession.isUnlocked && !adminSession.isChecking) {
         return <SignIn isChecking={adminSession.isChecking} isInvalid={adminSession.isInvalid} onUnlock={adminSession.unlock} />;
     }
@@ -132,7 +178,7 @@ function Explorer() {
         <section className="explorer-shell page-full">
             <Directory
                 activeFolderId={activeFolderId}
-                folders={explorerFolders.filter((folder) => folder.parentId === null)}
+                folders={explorerFolders}
                 onFolderSelect={selectFolder}
                 storageTotal={180_000_000_000}
                 storageUsed={allFiles.reduce((total, file) => total + file.size, 0)}
@@ -144,6 +190,7 @@ function Explorer() {
                 favoriteIds={favoriteIds}
                 files={visibleFiles}
                 filter={filter}
+                folderPath={folderPath}
                 folders={visibleFolders}
                 isLoadingFiles={uploads.isLoading}
                 loopEnabled={loopEnabled}
@@ -151,6 +198,7 @@ function Explorer() {
                 onFavoriteToggle={toggleFavorite}
                 onFilterChange={setFilter}
                 onFolderOpen={selectFolder}
+                onHomeOpen={() => selectFolder(null)}
                 onLock={lockDashboard}
                 onLoopToggle={() => setLoopEnabled((current) => !current)}
                 onModalClose={() => setSelectedFileId(null)}
@@ -159,12 +207,22 @@ function Explorer() {
                 onSearchChange={setSearchQuery}
                 onShuffleFiles={shuffleVisibleFiles}
                 onSortChange={setSort}
+                onUploadOpen={() => setUploadModalOpen(true)}
                 onViewChange={setView}
                 searchQuery={searchQuery}
                 selectedFile={selectedFile}
                 sort={sort}
                 view={view}
             />
+            {uploadModalOpen ? (
+                <UploadModal
+                    currentFolderId={activeFolderId}
+                    folders={explorerFolders}
+                    isUploading={uploadMedia.isPending}
+                    onClose={() => setUploadModalOpen(false)}
+                    onSubmit={(input) => uploadMedia.mutateAsync(input)}
+                />
+            ) : null}
         </section>
     );
 }
