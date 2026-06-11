@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { FiFolder } from "react-icons/fi";
+import { FiFile, FiFolder } from "react-icons/fi";
 import type { ExplorerFolder } from "./types";
 
 type FolderCardProps = {
@@ -24,7 +24,13 @@ export function FolderCard({ folder, onOpen }: FolderCardProps) {
       onClick={() => onOpen(folder.id)}
     >
       {folder.coverUrl ? <img alt="" src={folder.coverUrl} /> : <span className="explorer-folder-card__placeholder" aria-hidden><FiFolder /></span>}
-      <span className="explorer-folder-card__count">{itemCount} items{folderCount > 0 ? ` | ${folderCount} folders` : ""}</span>
+      <span className="explorer-folder-card__count" aria-label={`${itemCount} items${folderCount > 0 ? `, ${folderCount} folders` : ""}`}>
+        <span className="explorer-folder-card__count-text">{itemCount} items{folderCount > 0 ? ` | ${folderCount} folders` : ""}</span>
+        <span className="explorer-folder-card__count-mobile" aria-hidden>
+          <span><FiFile /> {itemCount}</span>
+          {folderCount > 0 ? <span><FiFolder /> {folderCount}</span> : null}
+        </span>
+      </span>
       <strong>{folder.name}</strong>
     </motion.button>
   );

@@ -3,9 +3,10 @@ import {
   ExplorerDeleteMediaInputSchema,
   ExplorerFavoriteInputSchema,
   ExplorerMoveMediaInputSchema,
-  ExplorerRemoteMediaInputSchema
+  ExplorerRemoteMediaInputSchema,
+  ExplorerTagsInputSchema
 } from "@fullstack-template/schema";
-import { and, asc, count, desc, eq, ilike, inArray, isNull, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, isNull, sql, type SQL } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, extname } from "node:path";
@@ -152,18 +153,46 @@ async function folderCounts(folderIds: string[]) {
   return counts;
 }
 
+async function descendantFolderIds(folderId: string) {
+  const rows = await db.select({ id: explorerFolders.id, parentId: explorerFolders.parentId }).from(explorerFolders);
+  const childrenByParent = rows.reduce<Record<string, string[]>>((groups, folder) => {
+    if (folder.parentId) {
+      groups[folder.parentId] = [...(groups[folder.parentId] ?? []), folder.id];
+    }
+
+    return groups;
+  }, {});
+  const descendantIds: string[] = [];
+  const pendingIds = [...(childrenByParent[folderId] ?? [])];
+
+  while (pendingIds.length > 0) {
+    const nextId = pendingIds.shift();
+    if (!nextId) {
+      continue;
+    }
+
+    descendantIds.push(nextId);
+    pendingIds.push(...(childrenByParent[nextId] ?? []));
+  }
+
+  return descendantIds;
+}
+
 explorerRoute.get("/contents", requireAdminKey, async (c) => {
   const folderId = optionalFolderId(c.req.query("folderId"));
   const filter = c.req.query("filter") ?? "all";
   const search = c.req.query("search")?.trim() ?? "";
   const sort = c.req.query("sort") ?? "newest";
+  const shuffleSeed = c.req.query("shuffleSeed")?.trim() ?? "";
   const limit = boundedInteger(c.req.query("limit"), 120, 1, 240);
   const offset = boundedInteger(c.req.query("offset"), 0, 0, 100_000);
 
   const folderWhere = folderId ? eq(explorerFolders.parentId, folderId) : isNull(explorerFolders.parentId);
   const mediaWhere: SQL[] = [];
 
-  if (folderId) {
+  if (filter === "mixed" && folderId) {
+    mediaWhere.push(inArray(explorerMedia.folderId, [folderId, ...(await descendantFolderIds(folderId))]));
+  } else if (folderId) {
     mediaWhere.push(eq(explorerMedia.folderId, folderId));
   }
 
@@ -172,10 +201,20 @@ explorerRoute.get("/contents", requireAdminKey, async (c) => {
   }
 
   if (search) {
-    mediaWhere.push(ilike(explorerMedia.name, `%${search}%`));
+    const searchPattern = `%${search}%`;
+    mediaWhere.push(sql`(${ilike(explorerMedia.name, searchPattern)} OR EXISTS (
+      SELECT 1 FROM jsonb_array_elements_text(${explorerMedia.tags}) AS media_tag(value)
+      WHERE media_tag.value ILIKE ${searchPattern}
+    ))`);
   }
 
-  const mediaOrder = sort === "oldest" ? asc(explorerMedia.createdAt) : sort === "name" ? asc(explorerMedia.name) : desc(explorerMedia.createdAt);
+  const mediaOrder = shuffleSeed
+    ? sql`md5(${explorerMedia.id}::text || ${shuffleSeed})`
+    : sort === "oldest"
+      ? asc(explorerMedia.createdAt)
+      : sort === "name"
+        ? asc(explorerMedia.name)
+        : desc(explorerMedia.createdAt);
   const mediaCondition = mediaWhere.length > 0 ? and(...mediaWhere) : undefined;
 
   const [folderRows, mediaRows, mediaTotalRows] = await Promise.all([
@@ -362,6 +401,31 @@ explorerRoute.post("/media/:id/favorite", requireAdminKey, async (c) => {
     .update(explorerMedia)
     .set({
       favorite: parsed.data.favorite,
+      updatedAt: new Date()
+    })
+    .where(eq(explorerMedia.id, c.req.param("id")))
+    .returning();
+
+  if (!media) {
+    return fail(c, "Media not found", 404, { code: "EXPLORER_MEDIA_NOT_FOUND" });
+  }
+
+  return ok(c, toExplorerMedia(media));
+});
+
+explorerRoute.post("/media/:id/tags", requireAdminKey, async (c) => {
+  const parsed = ExplorerTagsInputSchema.safeParse(await c.req.json().catch(() => null));
+
+  if (!parsed.success) {
+    return fail(c, "Invalid tags payload", 400, { code: "EXPLORER_TAGS_INVALID", details: parsed.error.issues });
+  }
+
+  const tags = Array.from(new Set(parsed.data.tags.map((tag) => tag.trim()).filter(Boolean)));
+
+  const [media] = await db
+    .update(explorerMedia)
+    .set({
+      tags,
       updatedAt: new Date()
     })
     .where(eq(explorerMedia.id, c.req.param("id")))

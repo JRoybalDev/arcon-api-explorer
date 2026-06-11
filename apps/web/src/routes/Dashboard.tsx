@@ -99,7 +99,7 @@ const defaultDraft: SiteDraftInput = {
     headingColor: "#f7eadc",
     accentColor: "#b98255"
   },
-  links: [{ label: "Open API docs", href: "http://localhost:3001/docs", kind: "primary" }],
+  links: [{ label: "Open API docs", href: "/docs", kind: "primary" }],
   published: true
 };
 
@@ -1497,7 +1497,7 @@ function HelpPanel() {
           <strong>Tracing:</strong> Every response includes `X-Request-Id`; include it in client logs when investigating server errors.
         </li>
         <li>
-          <strong>API reference:</strong> Open `http://localhost:3001/docs` for Swagger UI or `http://localhost:3001/openapi.json` for the OpenAPI document.
+          <strong>API reference:</strong> Open `/docs` for Swagger UI or `/openapi.json` for the OpenAPI document.
         </li>
         <li>
           <strong>Before handoff:</strong> Run `bun run typecheck`, `bun run build`, verify `/health`, and test dashboard unlock plus upload management.

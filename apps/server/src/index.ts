@@ -93,7 +93,7 @@ app.use(
 app.get("/health", (c) =>
   ok(c, {
     ok: true,
-    service: "fullstack-template-api"
+    service: "arcon-api"
   })
 );
 
@@ -104,7 +104,7 @@ app.get("/docs", (c) => c.html(openApiHtml()));
 app.get("/", (c) =>
   ok(c, {
     ok: true,
-    service: "fullstack-template-api",
+    service: "arcon-api",
     routes: {
       health: "/health",
       publicSites: "/api/sites",

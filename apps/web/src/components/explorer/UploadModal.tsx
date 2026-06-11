@@ -1,6 +1,6 @@
 import { type ChangeEvent, type DragEvent, type ReactNode, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { FiCode, FiLink, FiList, FiUpload, FiX } from "react-icons/fi";
+import { FiCode, FiLink, FiList, FiMinus, FiUpload, FiX } from "react-icons/fi";
 import type { ExplorerFolder } from "./types";
 
 export type UploadModalRemoteItem = {
@@ -17,11 +17,19 @@ export type UploadModalSubmitInput = {
   remoteItems: UploadModalRemoteItem[];
 };
 
+export type UploadProgressState = {
+  isActive: boolean;
+  label: string;
+  percent: number;
+};
+
 type UploadModalProps = {
   currentFolderId: string | null;
   folders: ExplorerFolder[];
   isUploading: boolean;
+  progress: UploadProgressState;
   onClose: () => void;
+  onMinimize: () => void;
   onSubmit: (input: UploadModalSubmitInput) => Promise<void>;
 };
 
@@ -37,7 +45,7 @@ const jsonTemplate = `{
   ]
 }`;
 
-export function UploadModal({ currentFolderId, folders, isUploading, onClose, onSubmit }: UploadModalProps) {
+export function UploadModal({ currentFolderId, folders, isUploading, progress, onClose, onMinimize, onSubmit }: UploadModalProps) {
   const [activeTab, setActiveTab] = useState<UploadTab>("files");
   const [bulkUrls, setBulkUrls] = useState("");
   const [destinationFolderId, setDestinationFolderId] = useState(currentFolderId ?? "");
@@ -190,9 +198,14 @@ export function UploadModal({ currentFolderId, folders, isUploading, onClose, on
             <h2>Upload Media</h2>
             <p>{isMobileUpload ? "Add files to upload" : "Add files or URLs to upload"}</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close upload modal">
-            <FiX aria-hidden />
-          </button>
+          <div className="explorer-upload-modal__header-actions">
+            <button type="button" onClick={onMinimize} aria-label="Minimize upload modal">
+              <FiMinus aria-hidden />
+            </button>
+            <button type="button" onClick={onClose} aria-label="Close upload modal">
+              <FiX aria-hidden />
+            </button>
+          </div>
         </header>
 
         {!isMobileUpload ? (
@@ -297,11 +310,14 @@ export function UploadModal({ currentFolderId, folders, isUploading, onClose, on
           ) : null}
 
           {message ? <p className="explorer-upload-message">{message}</p> : null}
+          {isUploading || progress.isActive ? (
+            <UploadProgress progress={progress} />
+          ) : null}
         </section>
 
         <footer className="explorer-upload-modal__footer">
-          <button type="button" onClick={onClose}>
-            Cancel
+          <button type="button" onClick={isUploading ? onMinimize : onClose}>
+            {isUploading ? "Minimize" : "Cancel"}
           </button>
           <button disabled={!canUpload || isUploading} type="button" onClick={() => void submit()}>
             {isUploading ? "Uploading..." : "Upload"}
@@ -309,6 +325,20 @@ export function UploadModal({ currentFolderId, folders, isUploading, onClose, on
         </footer>
       </motion.div>
     </motion.div>
+  );
+}
+
+export function UploadProgress({ progress }: { progress: UploadProgressState }) {
+  return (
+    <div className="explorer-upload-progress" role="status" aria-live="polite">
+      <div>
+        <span>{progress.label}</span>
+        <strong>{Math.round(progress.percent)}%</strong>
+      </div>
+      <div className="explorer-upload-progress__bar" aria-hidden>
+        <span style={{ width: `${Math.min(100, Math.max(0, progress.percent))}%` }} />
+      </div>
+    </div>
   );
 }
 

@@ -22,7 +22,7 @@ export const env = {
   betterAuthTrustedOrigins: splitList(process.env.BETTER_AUTH_TRUSTED_ORIGINS),
   betterAuthBootstrapAdminEmail: process.env.BETTER_AUTH_BOOTSTRAP_ADMIN_EMAIL,
   betterAuthBootstrapAdminPassword: process.env.BETTER_AUTH_BOOTSTRAP_ADMIN_PASSWORD,
-  betterAuthBootstrapAdminName: process.env.BETTER_AUTH_BOOTSTRAP_ADMIN_NAME ?? "Template Admin",
+  betterAuthBootstrapAdminName: process.env.BETTER_AUTH_BOOTSTRAP_ADMIN_NAME ?? "ARCON Admin",
   passwordResetEmailMode,
   passwordResetFromEmail: process.env.PASSWORD_RESET_FROM_EMAIL ?? "noreply@example.com",
   resendApiKey: process.env.RESEND_API_KEY,
@@ -49,7 +49,7 @@ export const env = {
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET,
-  cloudinaryFolder: process.env.CLOUDINARY_FOLDER ?? "fullstack-template",
+  cloudinaryFolder: process.env.CLOUDINARY_FOLDER ?? "arcon",
   publicApiUrl: process.env.PUBLIC_API_URL ?? "http://localhost:3001",
   webOrigin: process.env.WEB_ORIGIN ?? "http://localhost:5173",
   corsOrigins: splitList(process.env.CORS_ORIGINS, [

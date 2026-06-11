@@ -92,6 +92,10 @@ export const ExplorerFavoriteInputSchema = z.object({
   favorite: z.boolean()
 });
 
+export const ExplorerTagsInputSchema = z.object({
+  tags: z.array(z.string().trim().min(1).max(40)).max(30)
+});
+
 export const defaultSiteMetadata = {
   tabTitle: "",
   seoTitle: "",
@@ -276,6 +280,7 @@ export type ExplorerRemoteMediaInput = z.infer<typeof ExplorerRemoteMediaInputSc
 export type ExplorerMoveMediaInput = z.infer<typeof ExplorerMoveMediaInputSchema>;
 export type ExplorerDeleteMediaInput = z.infer<typeof ExplorerDeleteMediaInputSchema>;
 export type ExplorerFavoriteInput = z.infer<typeof ExplorerFavoriteInputSchema>;
+export type ExplorerTagsInput = z.infer<typeof ExplorerTagsInputSchema>;
 export type SiteMetadata = z.infer<typeof SiteMetadataSchema>;
 export type SiteBranding = z.infer<typeof SiteBrandingSchema>;
 export type Site = z.infer<typeof SiteSchema>;

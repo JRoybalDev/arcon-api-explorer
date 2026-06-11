@@ -51,7 +51,7 @@ export function PublicSite() {
   }
 
   if (error) {
-    return <div className="public-empty">API unavailable. Start the Bun server on port 3001.</div>;
+    return <div className="public-empty">API unavailable. Check the Bun server and API health endpoint.</div>;
   }
 
   return (
@@ -98,7 +98,7 @@ export function PublicSite() {
                 <a href="/dashboard" className="btn btn-primary">
                   Open control room
                 </a>
-                <a href="http://localhost:3001/health" className="btn btn-secondary">
+                <a href="/health" className="btn btn-secondary">
                   API health <FiExternalLink aria-hidden />
                 </a>
               </div>

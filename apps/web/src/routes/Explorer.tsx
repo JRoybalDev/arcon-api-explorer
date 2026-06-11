@@ -1,13 +1,14 @@
 import SignIn from "../components/SignIn";
 import { ContentArea } from "../components/explorer/ContentArea";
 import { Directory } from "../components/explorer/Directory";
-import { UploadModal, type UploadModalSubmitInput } from "../components/explorer/UploadModal";
+import { UploadModal, UploadProgress, type UploadModalSubmitInput, type UploadProgressState } from "../components/explorer/UploadModal";
 import { apiFolderToExplorerFolder, apiMediaToExplorerFile, type ExplorerFile, type ExplorerFilter, type ExplorerSort, type ExplorerView } from "../components/explorer/types";
 import { apiClient } from "../shared/apiClient";
 import { LoadingScreen } from "../shared/Loading";
 import { useAdminSession } from "../shared/useAdminSession";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { setDocumentTitle } from "../shared/siteConfig";
 
 function Explorer() {
@@ -18,13 +19,20 @@ function Explorer() {
     const [filter, setFilter] = useState<ExplorerFilter>("all");
     const [loopEnabled, setLoopEnabled] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const [selectedExternalFile, setSelectedExternalFile] = useState<ExplorerFile | null>(null);
     const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
+    const [selectedFileIndexOverride, setSelectedFileIndexOverride] = useState<number | null>(null);
+    const [viewerNextIndexOverride, setViewerNextIndexOverride] = useState<number | null>(null);
     const [shuffleSeed, setShuffleSeed] = useState(0);
     const [sort, setSort] = useState<ExplorerSort>("newest");
+    const [uploadInProgress, setUploadInProgress] = useState(false);
+    const [uploadMinimized, setUploadMinimized] = useState(false);
     const [uploadModalOpen, setUploadModalOpen] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState<UploadProgressState>({ isActive: false, label: "Preparing upload...", percent: 0 });
     const [view, setView] = useState<ExplorerView>("medium");
     const [mediaPageSize, setMediaPageSize] = useState(60);
     const [mediaLimit, setMediaLimit] = useState(mediaPageSize);
+    const uploadAbortControllerRef = useRef<AbortController | null>(null);
 
     useEffect(() => {
         setDocumentTitle("Private Explorer");
@@ -38,26 +46,19 @@ function Explorer() {
     });
 
     const contentsQuery = useQuery({
-        queryKey: ["explorer-contents", adminSession.adminKey, activeFolderId, filter, searchQuery, sort, mediaLimit],
+        queryKey: ["explorer-contents", adminSession.adminKey, activeFolderId, filter, searchQuery, sort, shuffleSeed, mediaLimit],
         queryFn: () =>
             apiClient.explorer.contents(adminSession.adminKey, {
                 filter,
                 folderId: activeFolderId,
                 limit: mediaLimit,
                 search: searchQuery,
+                shuffleSeed,
                 sort
             }),
         enabled: adminSession.isUnlocked,
         placeholderData: (previousData) => previousData,
         retry: false
-    });
-
-    const uploadMedia = useMutation({
-        mutationFn: uploadExplorerMedia,
-        onSuccess: () => {
-            setUploadModalOpen(false);
-            void invalidateExplorerQueries();
-        }
     });
 
     const createFolderMutation = useMutation({
@@ -80,6 +81,11 @@ function Explorer() {
         onSuccess: () => void invalidateExplorerQueries()
     });
 
+    const tagsMutation = useMutation({
+        mutationFn: ({ fileId, tags }: { fileId: string; tags: string[] }) => apiClient.explorer.setTags(adminSession.adminKey, fileId, tags),
+        onSuccess: () => void invalidateExplorerQueries()
+    });
+
     const allFolders = useMemo(() => foldersQuery.data?.map((folder) => apiFolderToExplorerFolder(folder)) ?? [], [foldersQuery.data]);
 
     const activeFolder = useMemo(
@@ -87,32 +93,41 @@ function Explorer() {
         [activeFolderId, allFolders]
     );
 
-    const visibleFolders = useMemo(() => contentsQuery.data?.folders.map((folder) => apiFolderToExplorerFolder(folder)) ?? [], [contentsQuery.data]);
+    const visibleFolders = useMemo(
+        () => allFolders.filter((folder) => folder.parentId === activeFolderId),
+        [activeFolderId, allFolders]
+    );
 
     const visibleFiles = useMemo(() => {
-        const files = contentsQuery.data?.media.map(apiMediaToExplorerFile) ?? [];
-
-        if (shuffleSeed === 0) {
-            return files;
-        }
-
-        return shuffleFiles(files, shuffleSeed);
-    }, [contentsQuery.data, shuffleSeed]);
+        return contentsQuery.data?.media.map(apiMediaToExplorerFile) ?? [];
+    }, [contentsQuery.data]);
 
     const favoriteIds = useMemo(() => visibleFiles.filter((file) => file.favorite).map((file) => file.id), [visibleFiles]);
     const mediaTotal = contentsQuery.data?.mediaTotal ?? visibleFiles.length;
     const canLoadMoreMedia = visibleFiles.length < mediaTotal;
 
     const selectedFile = useMemo(
-        () => visibleFiles.find((file) => file.id === selectedFileId) ?? null,
-        [selectedFileId, visibleFiles]
+        () => visibleFiles.find((file) => file.id === selectedFileId) ?? (selectedExternalFile?.id === selectedFileId ? selectedExternalFile : null),
+        [selectedExternalFile, selectedFileId, visibleFiles]
     );
 
+    const selectedFileIndex = useMemo(() => {
+        const loadedIndex = visibleFiles.findIndex((file) => file.id === selectedFileId);
+        return loadedIndex >= 0 ? loadedIndex : selectedFileIndexOverride ?? 0;
+    }, [selectedFileId, selectedFileIndexOverride, visibleFiles]);
+
     useEffect(() => {
-        if (selectedFileId && !visibleFiles.some((file) => file.id === selectedFileId)) {
+        if (selectedExternalFile && viewerNextIndexOverride === null && visibleFiles.some((file) => file.id === selectedExternalFile.id)) {
+            setSelectedExternalFile(null);
+            setSelectedFileIndexOverride(null);
+        }
+    }, [selectedExternalFile, viewerNextIndexOverride, visibleFiles]);
+
+    useEffect(() => {
+        if (selectedFileId && !visibleFiles.some((file) => file.id === selectedFileId) && selectedExternalFile?.id !== selectedFileId) {
             setSelectedFileId(null);
         }
-    }, [selectedFileId, visibleFiles]);
+    }, [selectedExternalFile, selectedFileId, visibleFiles]);
 
     useEffect(() => {
         setMediaLimit(mediaPageSize);
@@ -129,6 +144,9 @@ function Explorer() {
     function selectFolder(folderId: string | null) {
         setActiveFolderId(folderId);
         setSelectedFileId(null);
+        setSelectedExternalFile(null);
+        setSelectedFileIndexOverride(null);
+        setViewerNextIndexOverride(null);
     }
 
     function goUpOneFolder() {
@@ -140,23 +158,90 @@ function Explorer() {
     }
 
     function shuffleVisibleFiles() {
-        setShuffleSeed((current) => current + 1);
+        setSelectedExternalFile(selectedFile);
+        setShuffleSeed((current) => (current ? 0 : Date.now()));
+        setSelectedFileIndexOverride(selectedFile ? -1 : null);
+        setViewerNextIndexOverride(selectedFile ? 0 : null);
     }
 
-    function openRandomFile() {
-        if (visibleFiles.length === 0) {
+    async function openRandomFile() {
+        if (mediaTotal === 0) {
             return;
         }
 
-        const randomFile = visibleFiles[Math.floor(Math.random() * visibleFiles.length)];
-        if (randomFile) {
-            setSelectedFileId(randomFile.id);
+        await openFileAtIndex(Math.floor(Math.random() * mediaTotal));
+    }
+
+    function openLoadedFile(fileId: string) {
+        const fileIndex = visibleFiles.findIndex((file) => file.id === fileId);
+        setSelectedExternalFile(null);
+        setSelectedFileIndexOverride(fileIndex >= 0 ? fileIndex : null);
+        setViewerNextIndexOverride(null);
+        setSelectedFileId(fileId);
+    }
+
+    async function openFileAtIndex(index: number) {
+        if (mediaTotal === 0) {
+            return;
+        }
+
+        const normalizedIndex = ((index % mediaTotal) + mediaTotal) % mediaTotal;
+        const loadedFile = visibleFiles[normalizedIndex];
+
+        if (loadedFile) {
+            setSelectedExternalFile(null);
+            setSelectedFileIndexOverride(normalizedIndex);
+            setViewerNextIndexOverride(null);
+            setSelectedFileId(loadedFile.id);
+            maybeLoadMoreForViewer(normalizedIndex);
+            return;
+        }
+
+        const response = await apiClient.explorer.contents(adminSession.adminKey, {
+            filter,
+            folderId: activeFolderId,
+            limit: 1,
+            offset: normalizedIndex,
+            search: searchQuery,
+            shuffleSeed,
+            sort
+        });
+        const [media] = response.media;
+
+        if (!media) {
+            return;
+        }
+
+        const file = apiMediaToExplorerFile(media);
+        setSelectedExternalFile(file);
+        setSelectedFileIndexOverride(normalizedIndex);
+        setViewerNextIndexOverride(null);
+        setSelectedFileId(file.id);
+        maybeLoadMoreForViewer(normalizedIndex);
+    }
+
+    function navigateViewerByOffset(offset: number) {
+        if (viewerNextIndexOverride !== null && offset > 0) {
+            void openFileAtIndex(viewerNextIndexOverride);
+            return;
+        }
+
+        void openFileAtIndex(selectedFileIndex + offset);
+    }
+
+    function maybeLoadMoreForViewer(index: number) {
+        if (index >= visibleFiles.length - 2 && visibleFiles.length < mediaTotal) {
+            loadMoreMedia();
         }
     }
 
     function toggleFavorite(fileId: string) {
         const file = visibleFiles.find((candidate) => candidate.id === fileId);
         void favoriteMutation.mutateAsync({ favorite: !file?.favorite, fileId });
+    }
+
+    function updateFileTags(fileId: string, tags: string[]) {
+        void tagsMutation.mutateAsync({ fileId, tags });
     }
 
     function createFolder(folderName: string) {
@@ -190,18 +275,115 @@ function Explorer() {
     }
 
     async function uploadExplorerMedia(input: UploadModalSubmitInput) {
-        await Promise.all(input.files.map((file) => apiClient.explorer.uploadFile(adminSession.adminKey, file, input.folderId)));
+        if (uploadInProgress) {
+            return;
+        }
 
-        if (input.remoteItems.length > 0) {
-            await apiClient.explorer.addRemoteMedia(adminSession.adminKey, {
-                folderId: input.folderId,
-                items: input.remoteItems.map((item) => ({
-                    thumbnailUrl: item.thumbnailUrl,
-                    title: item.title,
-                    url: item.url
-                }))
+        const uploadAbortController = new AbortController();
+        uploadAbortControllerRef.current = uploadAbortController;
+        setUploadInProgress(true);
+        setUploadProgress({ isActive: true, label: "Preparing upload...", percent: 0 });
+
+        const fileBytes = input.files.reduce((total, file) => total + Math.max(file.size, 1), 0);
+        const remoteUnits = input.remoteItems.length;
+        const totalUnits = Math.max(fileBytes + remoteUnits, 1);
+        let completedUnits = 0;
+        const loadedFileBytes = new Map<File, number>();
+
+        function updateProgress(label: string, currentLoaded = 0) {
+            setUploadProgress({
+                isActive: true,
+                label,
+                percent: ((completedUnits + currentLoaded) / totalUnits) * 100
             });
         }
+
+        function updateConcurrentFileProgress(label: string) {
+            const loadedBytes = Array.from(loadedFileBytes.values()).reduce((total, value) => total + value, 0);
+            updateProgress(label, loadedBytes);
+        }
+
+        try {
+            if (input.files.length > 0) {
+                input.files.forEach((file) => loadedFileBytes.set(file, 0));
+                updateConcurrentFileProgress(`Uploading ${input.files.length} file${input.files.length === 1 ? "" : "s"}...`);
+
+                await Promise.all(
+                    input.files.map(async (file) => {
+                        await apiClient.explorer.uploadFileWithProgress(
+                            adminSession.adminKey,
+                            file,
+                            input.folderId,
+                            (loaded) => {
+                                loadedFileBytes.set(file, Math.min(loaded, Math.max(file.size, 1)));
+                                updateConcurrentFileProgress(`Uploading ${input.files.length} file${input.files.length === 1 ? "" : "s"}...`);
+                            },
+                            uploadAbortController.signal
+                        );
+                        loadedFileBytes.set(file, Math.max(file.size, 1));
+                    })
+                );
+
+                completedUnits += fileBytes;
+                loadedFileBytes.clear();
+                updateProgress(`Uploaded ${input.files.length} file${input.files.length === 1 ? "" : "s"}`);
+            }
+
+            if (input.remoteItems.length > 0) {
+                updateProgress(`Adding ${input.remoteItems.length} remote item${input.remoteItems.length === 1 ? "" : "s"}...`);
+                await apiClient.explorer.addRemoteMedia(adminSession.adminKey, {
+                    folderId: input.folderId,
+                    items: input.remoteItems.map((item) => ({
+                        thumbnailUrl: item.thumbnailUrl,
+                        title: item.title,
+                        url: item.url
+                    }))
+                }, uploadAbortController.signal);
+                completedUnits += input.remoteItems.length;
+                updateProgress(`Added ${input.remoteItems.length} remote item${input.remoteItems.length === 1 ? "" : "s"}`);
+            }
+
+            setUploadProgress({ isActive: true, label: "Upload complete", percent: 100 });
+            await invalidateExplorerQueries();
+            setUploadModalOpen(false);
+            setUploadMinimized(false);
+        } catch (error) {
+            if (uploadAbortController.signal.aborted) {
+                resetUploadState();
+                return;
+            }
+
+            setUploadProgress({
+                isActive: true,
+                label: error instanceof Error ? error.message : "Upload failed",
+                percent: 0
+            });
+            throw error;
+        } finally {
+            if (uploadAbortControllerRef.current === uploadAbortController) {
+                uploadAbortControllerRef.current = null;
+            }
+            setUploadInProgress(false);
+            window.setTimeout(() => {
+                setUploadProgress((current) => (current.percent >= 100 ? { isActive: false, label: "Preparing upload...", percent: 0 } : current));
+            }, 650);
+        }
+    }
+
+    function resetUploadState() {
+        setUploadInProgress(false);
+        setUploadMinimized(false);
+        setUploadModalOpen(false);
+        setUploadProgress({ isActive: false, label: "Preparing upload...", percent: 0 });
+    }
+
+    function closeUploadModal() {
+        if (uploadAbortControllerRef.current) {
+            uploadAbortControllerRef.current.abort();
+            return;
+        }
+
+        resetUploadState();
     }
 
     function invalidateExplorerQueries() {
@@ -247,6 +429,7 @@ function Explorer() {
                 loopEnabled={loopEnabled}
                 onAutoToggle={() => setAutoEnabled((current) => !current)}
                 onFavoriteToggle={toggleFavorite}
+                onFileTagsChange={updateFileTags}
                 onFolderBack={goUpOneFolder}
                 onFilterChange={setFilter}
                 onFilesDelete={deleteFiles}
@@ -257,49 +440,57 @@ function Explorer() {
                 onLoopToggle={() => setLoopEnabled((current) => !current)}
                 onLoadMoreFiles={loadMoreMedia}
                 onMediaPageSizeChange={updateMediaPageSize}
-                onModalClose={() => setSelectedFileId(null)}
-                onRandomFile={openRandomFile}
-                onSelectedFileChange={setSelectedFileId}
+                onModalClose={() => {
+                    setSelectedFileId(null);
+                    setSelectedExternalFile(null);
+                    setSelectedFileIndexOverride(null);
+                    setViewerNextIndexOverride(null);
+                }}
+                onRandomFile={() => void openRandomFile()}
+                onSelectedFileChange={openLoadedFile}
                 onSearchChange={setSearchQuery}
                 onShuffleFiles={shuffleVisibleFiles}
                 onSortChange={setSort}
-                onUploadOpen={() => setUploadModalOpen(true)}
+                onUploadOpen={() => {
+                    setUploadMinimized(false);
+                    setUploadModalOpen(true);
+                }}
                 onViewChange={setView}
                 searchQuery={searchQuery}
                 selectedFile={selectedFile}
+                selectedFileIndex={selectedFileIndex}
+                shuffleEnabled={shuffleSeed > 0}
                 sort={sort}
                 totalFiles={mediaTotal}
                 canLoadMoreFiles={canLoadMoreMedia}
+                onViewerNavigateByOffset={navigateViewerByOffset}
                 view={view}
             />
-            {uploadModalOpen ? (
+            {uploadModalOpen && !uploadMinimized ? (
                 <UploadModal
                     currentFolderId={activeFolderId}
                     folders={allFolders}
-                    isUploading={uploadMedia.isPending}
-                    onClose={() => setUploadModalOpen(false)}
-                    onSubmit={(input) => uploadMedia.mutateAsync(input)}
+                    isUploading={uploadInProgress}
+                    progress={uploadProgress}
+                    onClose={closeUploadModal}
+                    onMinimize={() => setUploadMinimized(true)}
+                    onSubmit={uploadExplorerMedia}
                 />
+            ) : null}
+            {uploadMinimized && uploadProgress.isActive ? (
+                <motion.aside
+                    className="explorer-upload-minimized"
+                    aria-label="Upload progress"
+                    initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.18 }}
+                    onClick={() => setUploadMinimized(false)}
+                >
+                    <UploadProgress progress={uploadProgress} />
+                </motion.aside>
             ) : null}
         </section>
     );
 }
 
 export default Explorer;
-
-function shuffleFiles(files: ExplorerFile[], seed: number) {
-    const result = [...files];
-    let value = seed || 1;
-
-    function random() {
-        value = (value * 9301 + 49297) % 233280;
-        return value / 233280;
-    }
-
-    for (let index = result.length - 1; index > 0; index -= 1) {
-        const swapIndex = Math.floor(random() * (index + 1));
-        [result[index], result[swapIndex]] = [result[swapIndex]!, result[index]!];
-    }
-
-    return result;
-}

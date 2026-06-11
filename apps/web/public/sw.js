@@ -1,6 +1,23 @@
 const cacheName = "arcon-vault-shell-v1";
 const shellFiles = ["/", "/manifest.webmanifest", "/favicon.svg"];
 
+function shouldCache(request) {
+  if (request.method !== "GET") {
+    return false;
+  }
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) {
+    return false;
+  }
+
+  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/content/") || url.pathname.startsWith("/content-thumb/") || url.pathname.startsWith("/uploads/")) {
+    return false;
+  }
+
+  return request.mode === "navigate" || url.pathname === "/" || url.pathname.startsWith("/assets/") || url.pathname.startsWith("/pwa/") || url.pathname === "/manifest.webmanifest" || url.pathname === "/favicon.svg";
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(cacheName).then((cache) => cache.addAll(shellFiles)));
   self.skipWaiting();
@@ -14,7 +31,7 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") {
+  if (!shouldCache(event.request)) {
     return;
   }
 

@@ -19,6 +19,18 @@ type ScannedMedia = {
   storageResourceType: "image" | "video";
 };
 
+type ScannedFolder = {
+  name: string;
+  parentPath: string;
+  path: string;
+};
+
+type ScannedContent = {
+  failedDirectories: number;
+  folders: ScannedFolder[];
+  media: ScannedMedia[];
+};
+
 type FolderRecord = {
   id: string;
   path: string;
@@ -43,11 +55,14 @@ async function hashPath(value: string) {
   return createHash("sha1").update(value).digest("hex");
 }
 
-async function scanContentDirectory(directory: string, root: string): Promise<ScannedMedia[]> {
+async function scanContentDirectory(directory: string, root: string): Promise<ScannedContent> {
+  let failedDirectories = 0;
   const entries = await readdir(directory, { withFileTypes: true }).catch((error) => {
     logger.warn("explorer.populate.read_failed", { directory, error });
+    failedDirectories += 1;
     return [];
   });
+  const folders: ScannedFolder[] = [];
   const media: ScannedMedia[] = [];
 
   for (const entry of entries) {
@@ -55,7 +70,18 @@ async function scanContentDirectory(directory: string, root: string): Promise<Sc
 
     if (entry.isDirectory()) {
       if (!shouldIgnoreDirectory(entry.name)) {
-        media.push(...(await scanContentDirectory(absolutePath, root)));
+        const relativePath = normalizeContentPath(absolutePath.substring(root.length));
+        const parentPath = normalizeContentPath(posix.dirname(relativePath) === "." ? "" : posix.dirname(relativePath));
+        folders.push({
+          name: entry.name,
+          parentPath,
+          path: relativePath
+        });
+
+        const scanned = await scanContentDirectory(absolutePath, root);
+        failedDirectories += scanned.failedDirectories;
+        folders.push(...scanned.folders);
+        media.push(...scanned.media);
       }
       continue;
     }
@@ -91,76 +117,62 @@ async function scanContentDirectory(directory: string, root: string): Promise<Sc
     });
   }
 
-  return media;
+  return { failedDirectories, folders, media };
 }
 
-function folderPathsFor(media: ScannedMedia[]) {
-  const paths = new Set<string>();
-
-  media.forEach((item) => {
-    if (!item.folderPath) {
-      return;
-    }
-
-    const parts = item.folderPath.split("/").filter(Boolean);
-    for (let index = 0; index < parts.length; index += 1) {
-      paths.add(parts.slice(0, index + 1).join("/"));
-    }
-  });
-
-  return Array.from(paths).sort((a, b) => a.split("/").length - b.split("/").length || a.localeCompare(b));
-}
-
-async function syncFolders(media: ScannedMedia[]) {
+async function syncFolders(scannedFolders: ScannedFolder[], options: { prune: boolean }) {
   const existing = await db.select().from(explorerFolders);
   const existingByPath = new Map(existing.map((folder) => [folder.storageKey, folder]));
   const synced = new Map<string, FolderRecord>();
+  const sortedFolders = [...scannedFolders].sort((a, b) => a.path.split("/").length - b.path.split("/").length || a.path.localeCompare(b.path));
 
-  for (const folderPath of folderPathsFor(media)) {
-    const name = folderPath.split("/").pop() ?? folderPath;
-    const parentPath = folderPath.includes("/") ? folderPath.substring(0, folderPath.lastIndexOf("/")) : "";
-    const parentId = parentPath ? synced.get(parentPath)?.id ?? existingByPath.get(parentPath)?.id ?? null : null;
-    const existingFolder = existingByPath.get(folderPath);
+  for (const scannedFolder of sortedFolders) {
+    const parentId = scannedFolder.parentPath ? synced.get(scannedFolder.parentPath)?.id ?? existingByPath.get(scannedFolder.parentPath)?.id ?? null : null;
+    const existingFolder = existingByPath.get(scannedFolder.path);
 
     if (existingFolder) {
       const [folder] = await db
         .update(explorerFolders)
         .set({
-          name,
+          name: scannedFolder.name,
           parentId,
           updatedAt: new Date()
         })
         .where(eq(explorerFolders.id, existingFolder.id))
         .returning();
-      synced.set(folderPath, { id: folder?.id ?? existingFolder.id, path: folderPath });
+      synced.set(scannedFolder.path, { id: folder?.id ?? existingFolder.id, path: scannedFolder.path });
       continue;
     }
 
     const [folder] = await db
       .insert(explorerFolders)
       .values({
-        name,
+        name: scannedFolder.name,
         parentId,
-        storageKey: folderPath
+        storageKey: scannedFolder.path
       })
       .returning();
 
     if (folder) {
-      synced.set(folderPath, { id: folder.id, path: folderPath });
+      synced.set(scannedFolder.path, { id: folder.id, path: scannedFolder.path });
     }
   }
 
-  const validPaths = new Set(folderPathsFor(media));
-  const obsoleteFolderIds = existing.filter((folder) => folder.storageKey && !validPaths.has(folder.storageKey)).map((folder) => folder.id);
+  if (options.prune) {
+    const validPaths = new Set(scannedFolders.map((folder) => folder.path));
+    const obsoleteFolderIds = existing
+      .filter((folder) => folder.storageKey && !folder.storageKey.startsWith("fake-seed/") && !validPaths.has(folder.storageKey))
+      .map((folder) => folder.id);
 
-  if (obsoleteFolderIds.length > 0) {
-    await db.delete(explorerFolders).where(inArray(explorerFolders.id, obsoleteFolderIds));
+    if (obsoleteFolderIds.length > 0) {
+      await db.delete(explorerFolders).where(inArray(explorerFolders.id, obsoleteFolderIds));
+    }
   }
 
   return synced;
 }
 
-async function syncMedia(scannedMedia: ScannedMedia[], folders: Map<string, FolderRecord>) {
+async function syncMedia(scannedMedia: ScannedMedia[], folders: Map<string, FolderRecord>, options: { prune: boolean }) {
   const existing = await db.select().from(explorerMedia).where(eq(explorerMedia.source, "indexed"));
   const existingByKey = new Map(existing.map((media) => [media.storageKey, media]));
   const processedKeys = new Set<string>();
@@ -195,9 +207,11 @@ async function syncMedia(scannedMedia: ScannedMedia[], folders: Map<string, Fold
     });
   }
 
-  const obsoleteIds = existing.filter((media) => !processedKeys.has(media.storageKey)).map((media) => media.id);
-  if (obsoleteIds.length > 0) {
-    await db.delete(explorerMedia).where(and(eq(explorerMedia.source, "indexed"), inArray(explorerMedia.id, obsoleteIds)));
+  if (options.prune) {
+    const obsoleteIds = existing.filter((media) => !processedKeys.has(media.storageKey)).map((media) => media.id);
+    if (obsoleteIds.length > 0) {
+      await db.delete(explorerMedia).where(and(eq(explorerMedia.source, "indexed"), inArray(explorerMedia.id, obsoleteIds)));
+    }
   }
 }
 
@@ -227,14 +241,23 @@ export async function populateExplorerFromContentRoot() {
       contentRoot: env.contentRoot
     });
 
-    const scannedMedia = await scanContentDirectory(env.contentRoot, env.contentRoot.replace(/\/+$/, ""));
-    const folders = await syncFolders(scannedMedia);
-    await syncMedia(scannedMedia, folders);
+    const scannedContent = await scanContentDirectory(env.contentRoot, env.contentRoot.replace(/\/+$/, ""));
+    const shouldPrune = scannedContent.failedDirectories === 0;
+
+    if (!shouldPrune) {
+      logger.warn("explorer.populate.prune_skipped", {
+        failedDirectories: scannedContent.failedDirectories
+      });
+    }
+
+    const folders = await syncFolders(scannedContent.folders, { prune: shouldPrune });
+    await syncMedia(scannedContent.media, folders, { prune: shouldPrune });
     await updateFolderCovers();
 
     logger.info("explorer.populate.completed", {
       durationMs: Date.now() - startedAt,
-      files: scannedMedia.length,
+      failedDirectories: scannedContent.failedDirectories,
+      files: scannedContent.media.length,
       folders: folders.size
     });
   })().finally(() => {

@@ -19,12 +19,15 @@ type ContentAreaProps = {
   loopEnabled: boolean;
   searchQuery: string;
   selectedFile: ExplorerFile | null;
+  selectedFileIndex: number;
+  shuffleEnabled: boolean;
   sort: ExplorerSort;
   totalFiles?: number;
   view: ExplorerView;
   canLoadMoreFiles?: boolean;
   onAutoToggle: () => void;
   onFavoriteToggle: (fileId: string) => void;
+  onFileTagsChange: (fileId: string, tags: string[]) => void;
   onFolderBack: () => void;
   onFilterChange: (filter: ExplorerFilter) => void;
   onFilesDelete: (fileIds: string[]) => void;
@@ -43,6 +46,7 @@ type ContentAreaProps = {
   onSortChange: (sort: ExplorerSort) => void;
   onUploadOpen: () => void;
   onViewChange: (view: ExplorerView) => void;
+  onViewerNavigateByOffset: (offset: number) => void;
 };
 
 export function ContentArea({
@@ -58,12 +62,15 @@ export function ContentArea({
   loopEnabled,
   searchQuery,
   selectedFile,
+  selectedFileIndex,
+  shuffleEnabled,
   sort,
   totalFiles,
   view,
   canLoadMoreFiles = false,
   onAutoToggle,
   onFavoriteToggle,
+  onFileTagsChange,
   onFolderBack,
   onFilterChange,
   onFilesDelete,
@@ -81,7 +88,8 @@ export function ContentArea({
   onShuffleFiles,
   onSortChange,
   onUploadOpen,
-  onViewChange
+  onViewChange,
+  onViewerNavigateByOffset
 }: ContentAreaProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
@@ -332,6 +340,9 @@ export function ContentArea({
               </button>
             </>
           )}
+          <button className="explorer-icon-button explorer-logout-button" type="button" onClick={signOut} title="Sign out" aria-label="Sign out">
+            <FiLogOut aria-hidden />
+          </button>
           <div className="explorer-menu" ref={menuRef}>
             <button
               aria-expanded={menuOpen}
@@ -351,7 +362,8 @@ export function ContentArea({
                   {[
                     { label: "All Media", value: "all" as const },
                     { label: "Images", value: "image" as const },
-                    { label: "Videos", value: "video" as const }
+                    { label: "Videos", value: "video" as const },
+                    { label: "Mixed", value: "mixed" as const }
                   ].map((option) => (
                     <button key={option.value} type="button" role="menuitemradio" aria-checked={filter === option.value} onClick={() => selectFilter(option.value)}>
                       {option.label}
@@ -393,9 +405,14 @@ export function ContentArea({
       </header>
 
       <FiltersSearch
+        filter={filter}
+        onFilterChange={onFilterChange}
         onSearchChange={onSearchChange}
+        onSelectItems={selectItems}
+        onSortChange={onSortChange}
         onViewChange={onViewChange}
         searchQuery={searchQuery}
+        sort={sort}
         view={view}
       />
 
@@ -417,7 +434,7 @@ export function ContentArea({
           </div>
         ) : null}
 
-        {folders.length > 0 && view !== "list" ? (
+        {folders.length > 0 ? (
           <section className="explorer-section" aria-labelledby="explorer-folders-heading">
             <div className="explorer-section__label" id="explorer-folders-heading">
               Folders <span>{folders.length}</span>
@@ -559,12 +576,16 @@ export function ContentArea({
           favoriteIds={favoriteIds}
           file={selectedFile}
           files={files}
+          fileIndex={selectedFileIndex}
           loopEnabled={loopEnabled}
+          shuffleEnabled={shuffleEnabled}
+          totalFiles={totalFiles ?? files.length}
           onAutoToggle={onAutoToggle}
           onClose={onModalClose}
           onFavoriteToggle={onFavoriteToggle}
+          onTagsChange={onFileTagsChange}
           onLoopToggle={onLoopToggle}
-          onNavigate={onSelectedFileChange}
+          onNavigateByOffset={onViewerNavigateByOffset}
           onRandom={onRandomFile}
           onShuffle={onShuffleFiles}
         />

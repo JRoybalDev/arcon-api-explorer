@@ -232,11 +232,12 @@ export const apiClient = {
     async contents(
       adminKey: string,
       input: {
-        filter?: "all" | "image" | "video";
+        filter?: "all" | "image" | "video" | "mixed";
         folderId?: string | null;
         limit?: number;
         offset?: number;
         search?: string;
+        shuffleSeed?: number;
         sort?: "newest" | "oldest" | "name";
       } = {}
     ) {
@@ -255,6 +256,9 @@ export const apiClient = {
       }
       if (input.search) {
         params.set("search", input.search);
+      }
+      if (input.shuffleSeed) {
+        params.set("shuffleSeed", String(input.shuffleSeed));
       }
       if (input.sort) {
         params.set("sort", input.sort);
@@ -298,12 +302,71 @@ export const apiClient = {
       );
     },
 
-    async addRemoteMedia(adminKey: string, input: { folderId: string | null; items: Array<{ tags?: string[]; thumbnailUrl?: string; title?: string; url: string }> }) {
+    async uploadFileWithProgress(adminKey: string, file: File, folderId: string | null, onProgress: (loaded: number, total: number) => void, signal?: AbortSignal) {
+      const form = new FormData();
+      form.append("file", file);
+      if (folderId) {
+        form.append("folderId", folderId);
+      }
+
+      return new Promise<ExplorerMedia>((resolve, reject) => {
+        const request = new XMLHttpRequest();
+        request.open("POST", "/api/explorer/media/upload");
+        request.setRequestHeader("X-Admin-Key", adminKey);
+
+        if (signal?.aborted) {
+          request.abort();
+          reject(new Error("Upload cancelled"));
+          return;
+        }
+
+        function abortRequest() {
+          request.abort();
+        }
+
+        signal?.addEventListener("abort", abortRequest, { once: true });
+
+        request.upload.addEventListener("progress", (event) => {
+          onProgress(event.loaded, event.lengthComputable ? event.total : file.size);
+        });
+
+        request.addEventListener("load", () => {
+          try {
+            const parsed = JSON.parse(request.responseText) as unknown;
+
+            if (request.status < 200 || request.status >= 300) {
+              reject(new Error(typeof parsed === "object" && parsed && "message" in parsed ? String(parsed.message) : "Upload failed"));
+              return;
+            }
+
+            const data = parsed && typeof parsed === "object" && "success" in parsed && parsed.success === true && "data" in parsed ? parsed.data : parsed;
+            resolve(ExplorerMediaSchema.parse(data));
+          } catch (error) {
+            reject(error);
+          } finally {
+            signal?.removeEventListener("abort", abortRequest);
+          }
+        });
+
+        request.addEventListener("error", () => {
+          signal?.removeEventListener("abort", abortRequest);
+          reject(new Error("Upload failed"));
+        });
+        request.addEventListener("abort", () => {
+          signal?.removeEventListener("abort", abortRequest);
+          reject(new Error("Upload cancelled"));
+        });
+        request.send(form);
+      });
+    },
+
+    async addRemoteMedia(adminKey: string, input: { folderId: string | null; items: Array<{ tags?: string[]; thumbnailUrl?: string; title?: string; url: string }> }, signal?: AbortSignal) {
       return ExplorerMediaSchema.array().parse(
         await apiJson(
           "/api/explorer/media/remote",
           withAdminKey(adminKey, {
             method: "POST",
+            signal,
             body: JSON.stringify(input)
           })
         )
@@ -341,6 +404,18 @@ export const apiClient = {
           withAdminKey(adminKey, {
             method: "POST",
             body: JSON.stringify({ favorite })
+          })
+        )
+      );
+    },
+
+    async setTags(adminKey: string, mediaId: string, tags: string[]): Promise<ExplorerMedia> {
+      return ExplorerMediaSchema.parse(
+        await apiJson(
+          `/api/explorer/media/${encodeURIComponent(mediaId)}/tags`,
+          withAdminKey(adminKey, {
+            method: "POST",
+            body: JSON.stringify({ tags })
           })
         )
       );

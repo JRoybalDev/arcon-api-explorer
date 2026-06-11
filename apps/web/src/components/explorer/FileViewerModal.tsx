@@ -1,21 +1,26 @@
-import { type RefObject, type TouchEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type MouseEvent, type RefObject, type TouchEvent, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { FiArrowLeft, FiCopy, FiDownload, FiExternalLink, FiHeart, FiImage, FiLock, FiMaximize2, FiMoreVertical, FiPauseCircle, FiPlayCircle, FiRefreshCw, FiShuffle, FiSkipBack, FiSkipForward, FiTrash2, FiX, FiZap } from "react-icons/fi";
+import { FiArrowLeft, FiCopy, FiDownload, FiHeart, FiImage, FiLock, FiMaximize2, FiMoreVertical, FiPauseCircle, FiPlayCircle, FiPlus, FiRefreshCw, FiShuffle, FiSkipBack, FiSkipForward, FiTrash2, FiX, FiZap } from "react-icons/fi";
+import { FaDice } from "react-icons/fa";
 import type { ExplorerFile } from "./types";
 
 type FileViewerModalProps = {
   autoEnabled: boolean;
   favoriteIds: string[];
   file: ExplorerFile;
+  fileIndex: number;
   files: ExplorerFile[];
   loopEnabled: boolean;
+  shuffleEnabled: boolean;
+  totalFiles: number;
   onAutoToggle: () => void;
   onClose: () => void;
   onFavoriteToggle: (fileId: string) => void;
   onLoopToggle: () => void;
-  onNavigate: (fileId: string) => void;
+  onNavigateByOffset: (offset: number) => void;
   onRandom: () => void;
   onShuffle: () => void;
+  onTagsChange: (fileId: string, tags: string[]) => void;
 };
 
 type SwipeState = "next" | "previous" | "close" | "reset" | null;
@@ -25,15 +30,19 @@ export function FileViewerModal({
   autoEnabled,
   favoriteIds,
   file,
+  fileIndex,
   files,
   loopEnabled,
+  shuffleEnabled,
+  totalFiles,
   onAutoToggle,
   onClose,
   onFavoriteToggle,
   onLoopToggle,
-  onNavigate,
+  onNavigateByOffset,
   onRandom,
-  onShuffle
+  onShuffle,
+  onTagsChange
 }: FileViewerModalProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
@@ -53,14 +62,17 @@ export function FileViewerModal({
   const [viewerChromeVisible, setViewerChromeVisible] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [swipeState, setSwipeState] = useState<SwipeState>(null);
+  const [tagDraft, setTagDraft] = useState("");
+  const [tagEditorOpen, setTagEditorOpen] = useState(false);
   const [videoLoops, setVideoLoops] = useState(0);
   const [zoomScale, setZoomScale] = useState(1);
   const isImage = file.contentType.startsWith("image/");
   const isVideo = file.contentType.startsWith("video/");
   const isFavorite = favoriteIds.includes(file.id);
-  const currentIndex = Math.max(0, files.findIndex((candidate) => candidate.id === file.id));
-  const nextFile = files[(currentIndex + 1) % files.length];
-  const previousFile = files[(currentIndex - 1 + files.length) % files.length];
+  const currentIndex = Math.max(0, fileIndex);
+  const loadedIndex = files.findIndex((candidate) => candidate.id === file.id);
+  const nextFile = loadedIndex >= 0 ? files[loadedIndex + 1] ?? null : null;
+  const previousFile = loadedIndex > 0 ? files[loadedIndex - 1] ?? null : null;
   const previewFile = swipePreviewFile;
   const stageWidth = stageRef.current?.clientWidth ?? (typeof window === "undefined" ? 390 : window.innerWidth);
   const swipeGap = 28;
@@ -87,6 +99,8 @@ export function FileViewerModal({
     setPanOffset({ x: 0, y: 0 });
     setPreviewDirection(null);
     setSwipePreviewFile(null);
+    setTagDraft("");
+    setTagEditorOpen(false);
     setZoomScale(1);
   }, [file.id, autoEnabled]);
 
@@ -119,13 +133,11 @@ export function FileViewerModal({
     }
 
     const timer = window.setTimeout(() => {
-      if (nextFile) {
-        onNavigate(nextFile.id);
-      }
+      goNext();
     }, 5000);
 
     return () => window.clearTimeout(timer);
-  }, [autoEnabled, isVideo, nextFile, onNavigate]);
+  }, [autoEnabled, isVideo, file.id, totalFiles]);
 
   useEffect(() => {
     function closeOnEscape(event: KeyboardEvent) {
@@ -139,14 +151,14 @@ export function FileViewerModal({
   }, [interactionLocked, onClose]);
 
   function goPrevious() {
-    if (previousFile) {
-      onNavigate(previousFile.id);
+    if (totalFiles > 0) {
+      onNavigateByOffset(-1);
     }
   }
 
   function goNext() {
-    if (nextFile) {
-      onNavigate(nextFile.id);
+    if (totalFiles > 0) {
+      onNavigateByOffset(1);
     }
   }
 
@@ -177,10 +189,6 @@ export function FileViewerModal({
     await targetRef.current?.requestFullscreen?.();
   }
 
-  function openOriginal() {
-    window.open(file.url, "_blank", "noopener,noreferrer,width=1200,height=800");
-  }
-
   function requestClose() {
     if (interactionLocked || zoomScale > 1.01) {
       revealViewerChrome();
@@ -188,6 +196,19 @@ export function FileViewerModal({
     }
 
     onClose();
+  }
+
+  function handleStageClick(event: MouseEvent<HTMLElement>) {
+    if (window.matchMedia("(max-width: 760px)").matches) {
+      return;
+    }
+
+    const target = event.target;
+    if (!(target instanceof HTMLElement) || target.closest("img, video, a")) {
+      return;
+    }
+
+    requestClose();
   }
 
   function scheduleChromeHide() {
@@ -426,6 +447,23 @@ export function FileViewerModal({
     }
   }
 
+  function addTag() {
+    const nextTag = tagDraft.trim();
+
+    if (!nextTag) {
+      return;
+    }
+
+    const nextTags = Array.from(new Set([...(file.tags ?? []), nextTag]));
+    onTagsChange(file.id, nextTags);
+    setTagDraft("");
+    setTagEditorOpen(false);
+  }
+
+  function removeTag(tagToRemove: string) {
+    onTagsChange(file.id, (file.tags ?? []).filter((tag) => tag !== tagToRemove));
+  }
+
   function commitSwipe(nextSwipeState: Exclude<SwipeState, null | "reset">) {
     setSwipeState(nextSwipeState);
 
@@ -513,17 +551,10 @@ export function FileViewerModal({
       </header>
 
       <div className="explorer-viewer__counter">
-        {currentIndex + 1} / {files.length}
+        {Math.min(currentIndex + 1, totalFiles)} / {totalFiles}
       </div>
       <button className="explorer-viewer__close" type="button" onClick={requestClose} aria-label="Close viewer">
         <FiX aria-hidden />
-      </button>
-
-      <button className="explorer-viewer__nav explorer-viewer__nav--previous" type="button" onClick={goPrevious} aria-label="Previous file">
-        <FiSkipBack aria-hidden />
-      </button>
-      <button className="explorer-viewer__nav explorer-viewer__nav--next" type="button" onClick={goNext} aria-label="Next file">
-        <FiSkipForward aria-hidden />
       </button>
 
       <motion.div
@@ -535,6 +566,7 @@ export function FileViewerModal({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onClick={handleStageClick}
         onTouchCancel={() => {
           touchStartX.current = null;
           touchStartY.current = null;
@@ -586,52 +618,95 @@ export function FileViewerModal({
         </dl>
 
         <div className="explorer-viewer__tags">
-          {(file.tags?.length ? file.tags : ["archive"]).map((tag) => (
-            <span key={tag}>{tag}</span>
-          ))}
+          <div className="explorer-viewer__tags-list">
+            {(file.tags?.length ? file.tags : []).map((tag) => (
+              <button key={tag} type="button" onClick={() => removeTag(tag)} title={`Remove ${tag}`}>
+                {tag}
+                <FiX aria-hidden />
+              </button>
+            ))}
+            {file.tags?.length ? null : <span>No tags</span>}
+          </div>
+          {tagEditorOpen ? (
+            <div className="explorer-viewer__tag-create">
+              <input
+                autoFocus
+                placeholder="New tag"
+                value={tagDraft}
+                onChange={(event) => setTagDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    addTag();
+                  }
+
+                  if (event.key === "Escape") {
+                    setTagEditorOpen(false);
+                    setTagDraft("");
+                  }
+                }}
+              />
+              <button type="button" onClick={addTag}>
+                Add
+              </button>
+              <button type="button" onClick={() => {
+                setTagEditorOpen(false);
+                setTagDraft("");
+              }}>
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button className="explorer-viewer__tag-add" type="button" onClick={() => setTagEditorOpen(true)}>
+              <FiPlus aria-hidden /> Add Tag
+            </button>
+          )}
         </div>
 
         <div className="explorer-viewer__controls">
-          <button aria-pressed={isFavorite} type="button" onClick={() => onFavoriteToggle(file.id)} title="Favorite">
-            <FiHeart aria-hidden /> Favorite
+          <button className="explorer-viewer__control-main explorer-viewer__control-main--side" type="button" onClick={goPrevious} title="Previous file">
+            <FiSkipBack aria-hidden /> Prev
           </button>
-          <button type="button" onClick={onShuffle} title="Shuffle file list">
-            <FiShuffle aria-hidden /> Shuffle
+          <button className="explorer-viewer__control-main explorer-viewer__control-main--center" aria-pressed={autoEnabled} type="button" onClick={onAutoToggle} title="Auto advance">
+            {autoEnabled ? <FiPauseCircle aria-hidden /> : <FiPlayCircle aria-hidden />} Auto {autoEnabled ? "ON" : "OFF"}
           </button>
-          <button type="button" onClick={onRandom} title="Open random file">
-            <FiRefreshCw aria-hidden /> Random
+          <button className="explorer-viewer__control-main explorer-viewer__control-main--side" type="button" onClick={goNext} title="Next file">
+            Next <FiSkipForward aria-hidden />
           </button>
-          <button type="button" onClick={() => void enterFullscreen(stageRef)} title="Fullscreen">
-            <FiMaximize2 aria-hidden /> Fullscreen
+          <button className="explorer-viewer__control-action" aria-label="Favorite" aria-pressed={isFavorite} type="button" onClick={() => onFavoriteToggle(file.id)} title="Favorite">
+            <FiHeart aria-hidden />
           </button>
-          <button type="button" onClick={openOriginal} title="Open original">
-            <FiExternalLink aria-hidden /> Open
+          <button className="explorer-viewer__control-action" aria-label="Open random file" type="button" onClick={onRandom} title="Open random file">
+            <FaDice aria-hidden />
+          </button>
+          <button className="explorer-viewer__control-action" aria-label={shuffleEnabled ? "Turn shuffle off" : "Turn shuffle on"} aria-pressed={shuffleEnabled} type="button" onClick={onShuffle} title={shuffleEnabled ? "Shuffle ON" : "Shuffle OFF"}>
+            <FiShuffle aria-hidden />
+          </button>
+          <button className="explorer-viewer__control-action" aria-label="Fullscreen" type="button" onClick={() => void enterFullscreen(stageRef)} title="Fullscreen">
+            <FiMaximize2 aria-hidden />
           </button>
           {isVideo ? (
-            <button aria-pressed={loopEnabled} type="button" onClick={onLoopToggle} title="Loop video">
-              <FiRefreshCw aria-hidden /> Loop
+            <button className="explorer-viewer__control-action explorer-viewer__control-action--half" aria-label={loopEnabled ? "Turn loop off" : "Turn loop on"} aria-pressed={loopEnabled} type="button" onClick={onLoopToggle} title="Loop video">
+              <FiRefreshCw aria-hidden />
             </button>
           ) : null}
-          <button aria-pressed={autoEnabled} type="button" onClick={onAutoToggle} title="Auto advance">
-            {autoEnabled ? <FiPauseCircle aria-hidden /> : <FiPlayCircle aria-hidden />} Auto
+          <button className="explorer-viewer__control-link" type="button" onClick={() => void copyUrl()} title="Copy URL">
+            <FiCopy aria-hidden /> Copy URL
           </button>
         </div>
 
         <div className="explorer-viewer__links">
-          <button type="button" onClick={() => void copyUrl()}>
-            <FiCopy aria-hidden /> Copy URL
-          </button>
+          <p>Press ESC to close - click outside to dismiss</p>
         </div>
       </motion.aside>
 
       <nav className={`explorer-viewer__mobile-actions ${viewerChromeVisible ? "is-visible" : "is-hidden"}`} aria-label="Viewer actions">
         <button type="button" onClick={onRandom}>
-          <FiRefreshCw aria-hidden /> <span>Random</span>
+          <FaDice aria-hidden /> <span>Random</span>
         </button>
         <button aria-pressed={autoEnabled} type="button" onClick={onAutoToggle}>
           <FiZap aria-hidden /> <span>Auto</span>
         </button>
-        <button type="button" onClick={onShuffle}>
+        <button aria-pressed={shuffleEnabled} type="button" onClick={onShuffle}>
           <FiShuffle aria-hidden /> <span>Shuffle</span>
         </button>
         <button aria-pressed={interactionLocked} type="button" onClick={toggleInteractionLock}>

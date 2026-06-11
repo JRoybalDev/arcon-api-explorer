@@ -1,6 +1,6 @@
 import type { ExplorerFolder as ApiExplorerFolder, ExplorerMedia } from "@fullstack-template/schema";
 
-export type ExplorerFilter = "all" | "image" | "video";
+export type ExplorerFilter = "all" | "image" | "video" | "mixed";
 export type ExplorerSort = "newest" | "oldest" | "name";
 export type ExplorerView = "small" | "medium" | "large" | "list";
 
