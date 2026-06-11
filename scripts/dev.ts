@@ -1,3 +1,5 @@
+/// <reference types="bun" />
+
 type Service = {
   name: string;
   cwd: string;
@@ -68,3 +70,5 @@ console.log("- Dashboard: http://localhost:5173/dashboard");
 
 const results = await Promise.all(processes.map((service) => service.proc.exited));
 process.exit(results.find((code) => code !== 0) ?? 0);
+
+export {};

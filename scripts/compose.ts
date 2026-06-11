@@ -1,3 +1,5 @@
+/// <reference types="bun" />
+
 const args = process.argv.slice(2);
 
 if (args.length === 0) {
@@ -37,3 +39,5 @@ function getComposeCommand() {
   console.error("Docker Compose was not found. Install Docker Compose v2 or the legacy docker-compose binary.");
   process.exit(1);
 }
+
+export {};

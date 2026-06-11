@@ -1,14 +1,13 @@
 import SignIn from "../components/SignIn";
 import { ContentArea } from "../components/explorer/ContentArea";
 import { Directory } from "../components/explorer/Directory";
-import { inferContentType, UploadModal, type UploadModalSubmitInput } from "../components/explorer/UploadModal";
-import { explorerFolders, sampleExplorerFiles } from "../components/explorer/mockExplorerData";
-import { type ExplorerFile, type ExplorerFilter, type ExplorerFolder, type ExplorerSort, type ExplorerView, uploadToExplorerFile } from "../components/explorer/types";
+import { UploadModal, type UploadModalSubmitInput } from "../components/explorer/UploadModal";
+import { apiFolderToExplorerFolder, apiMediaToExplorerFile, type ExplorerFile, type ExplorerFilter, type ExplorerSort, type ExplorerView } from "../components/explorer/types";
 import { apiClient } from "../shared/apiClient";
 import { LoadingScreen } from "../shared/Loading";
 import { useAdminSession } from "../shared/useAdminSession";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { setDocumentTitle } from "../shared/siteConfig";
 
 function Explorer() {
@@ -16,83 +15,93 @@ function Explorer() {
     const queryClient = useQueryClient();
     const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
     const [autoEnabled, setAutoEnabled] = useState(false);
-    const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
     const [filter, setFilter] = useState<ExplorerFilter>("all");
     const [loopEnabled, setLoopEnabled] = useState(false);
-    const [deletedFileIds, setDeletedFileIds] = useState<string[]>([]);
-    const [localFiles, setLocalFiles] = useState<ExplorerFile[]>([]);
-    const [localFolders, setLocalFolders] = useState<ExplorerFolder[]>([]);
-    const [movedFileFolderIds, setMovedFileFolderIds] = useState<Record<string, string | null>>({});
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
     const [shuffleSeed, setShuffleSeed] = useState(0);
     const [sort, setSort] = useState<ExplorerSort>("newest");
     const [uploadModalOpen, setUploadModalOpen] = useState(false);
     const [view, setView] = useState<ExplorerView>("medium");
+    const [mediaPageSize, setMediaPageSize] = useState(60);
+    const [mediaLimit, setMediaLimit] = useState(mediaPageSize);
 
     useEffect(() => {
         setDocumentTitle("Private Explorer");
     }, []);
 
-    const uploads = useQuery({
-        queryKey: ["uploads", adminSession.adminKey],
-        queryFn: () => apiClient.uploads.list(adminSession.adminKey),
+    const foldersQuery = useQuery({
+        queryKey: ["explorer-folders", adminSession.adminKey],
+        queryFn: () => apiClient.explorer.listFolders(adminSession.adminKey),
         enabled: adminSession.isUnlocked,
         retry: false
     });
 
-    const uploadMedia = useMutation({
-        mutationFn: uploadExplorerMedia
+    const contentsQuery = useQuery({
+        queryKey: ["explorer-contents", adminSession.adminKey, activeFolderId, filter, searchQuery, sort, mediaLimit],
+        queryFn: () =>
+            apiClient.explorer.contents(adminSession.adminKey, {
+                filter,
+                folderId: activeFolderId,
+                limit: mediaLimit,
+                search: searchQuery,
+                sort
+            }),
+        enabled: adminSession.isUnlocked,
+        placeholderData: (previousData) => previousData,
+        retry: false
     });
 
-    const allFolders = useMemo(() => [...explorerFolders, ...localFolders], [localFolders]);
+    const uploadMedia = useMutation({
+        mutationFn: uploadExplorerMedia,
+        onSuccess: () => {
+            setUploadModalOpen(false);
+            void invalidateExplorerQueries();
+        }
+    });
+
+    const createFolderMutation = useMutation({
+        mutationFn: (name: string) => apiClient.explorer.createFolder(adminSession.adminKey, { name, parentId: activeFolderId }),
+        onSuccess: () => void invalidateExplorerQueries()
+    });
+
+    const moveFilesMutation = useMutation({
+        mutationFn: ({ fileIds, folderId }: { fileIds: string[]; folderId: string | null }) => apiClient.explorer.moveMedia(adminSession.adminKey, { folderId, mediaIds: fileIds }),
+        onSuccess: () => void invalidateExplorerQueries()
+    });
+
+    const deleteFilesMutation = useMutation({
+        mutationFn: (fileIds: string[]) => apiClient.explorer.deleteMedia(adminSession.adminKey, fileIds),
+        onSuccess: () => void invalidateExplorerQueries()
+    });
+
+    const favoriteMutation = useMutation({
+        mutationFn: ({ favorite, fileId }: { favorite: boolean; fileId: string }) => apiClient.explorer.setFavorite(adminSession.adminKey, fileId, favorite),
+        onSuccess: () => void invalidateExplorerQueries()
+    });
+
+    const allFolders = useMemo(() => foldersQuery.data?.map((folder) => apiFolderToExplorerFolder(folder)) ?? [], [foldersQuery.data]);
 
     const activeFolder = useMemo(
         () => allFolders.find((folder) => folder.id === activeFolderId) ?? null,
         [activeFolderId, allFolders]
     );
 
-    const visibleFolders = useMemo(
-        () => allFolders.filter((folder) => folder.parentId === activeFolderId),
-        [activeFolderId, allFolders]
-    );
-
-    const allFiles = useMemo<ExplorerFile[]>(() => {
-        const uploadedFiles = uploads.data?.map(uploadToExplorerFile) ?? [];
-        return [...sampleExplorerFiles, ...uploadedFiles, ...localFiles]
-            .filter((file) => !deletedFileIds.includes(file.id))
-            .map((file) => (Object.prototype.hasOwnProperty.call(movedFileFolderIds, file.id) ? { ...file, folderId: movedFileFolderIds[file.id] ?? null } : file));
-    }, [deletedFileIds, localFiles, movedFileFolderIds, uploads.data]);
+    const visibleFolders = useMemo(() => contentsQuery.data?.folders.map((folder) => apiFolderToExplorerFolder(folder)) ?? [], [contentsQuery.data]);
 
     const visibleFiles = useMemo(() => {
-        const query = searchQuery.trim().toLowerCase();
-
-        const files = allFiles
-            .filter((file) => (activeFolderId ? file.folderId === activeFolderId : file.folderId === null))
-            .filter((file) => {
-                if (filter === "all") {
-                    return true;
-                }
-
-                return file.contentType.startsWith(`${filter}/`);
-            })
-            .filter((file) => (query.length === 0 ? true : file.name.toLowerCase().includes(query)))
-            .sort((a, b) => {
-                if (sort === "name") {
-                    return a.name.localeCompare(b.name);
-                }
-
-                const aTime = new Date(a.createdAt).getTime();
-                const bTime = new Date(b.createdAt).getTime();
-                return sort === "oldest" ? aTime - bTime : bTime - aTime;
-            });
+        const files = contentsQuery.data?.media.map(apiMediaToExplorerFile) ?? [];
 
         if (shuffleSeed === 0) {
             return files;
         }
 
         return shuffleFiles(files, shuffleSeed);
-    }, [activeFolderId, allFiles, filter, searchQuery, shuffleSeed, sort]);
+    }, [contentsQuery.data, shuffleSeed]);
+
+    const favoriteIds = useMemo(() => visibleFiles.filter((file) => file.favorite).map((file) => file.id), [visibleFiles]);
+    const mediaTotal = contentsQuery.data?.mediaTotal ?? visibleFiles.length;
+    const canLoadMoreMedia = visibleFiles.length < mediaTotal;
 
     const selectedFile = useMemo(
         () => visibleFiles.find((file) => file.id === selectedFileId) ?? null,
@@ -104,6 +113,18 @@ function Explorer() {
             setSelectedFileId(null);
         }
     }, [selectedFileId, visibleFiles]);
+
+    useEffect(() => {
+        setMediaLimit(mediaPageSize);
+    }, [activeFolderId, filter, mediaPageSize, searchQuery, sort]);
+
+    const updateMediaPageSize = useCallback((nextPageSize: number) => {
+        setMediaPageSize((current) => (current === nextPageSize ? current : nextPageSize));
+    }, []);
+
+    const loadMoreMedia = useCallback(() => {
+        setMediaLimit((current) => current + mediaPageSize);
+    }, [mediaPageSize]);
 
     function selectFolder(folderId: string | null) {
         setActiveFolderId(folderId);
@@ -134,7 +155,8 @@ function Explorer() {
     }
 
     function toggleFavorite(fileId: string) {
-        setFavoriteIds((current) => (current.includes(fileId) ? current.filter((id) => id !== fileId) : [...current, fileId]));
+        const file = visibleFiles.find((candidate) => candidate.id === fileId);
+        void favoriteMutation.mutateAsync({ favorite: !file?.favorite, fileId });
     }
 
     function createFolder(folderName: string) {
@@ -144,16 +166,7 @@ function Explorer() {
             return;
         }
 
-        setLocalFolders((current) => [
-            ...current,
-            {
-                id: `folder-${crypto.randomUUID()}`,
-                name,
-                count: 0,
-                parentId: activeFolderId,
-                coverUrl: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=900&q=80"
-            }
-        ]);
+        void createFolderMutation.mutateAsync(name);
     }
 
     function deleteFiles(fileIds: string[]) {
@@ -161,19 +174,11 @@ function Explorer() {
             return;
         }
 
-        setDeletedFileIds((current) => Array.from(new Set([...current, ...fileIds])));
-        setLocalFiles((current) => current.filter((file) => !fileIds.includes(file.id)));
-        setMovedFileFolderIds((current) => {
-            const next = { ...current };
-            fileIds.forEach((fileId) => {
-                delete next[fileId];
-            });
-            return next;
-        });
-
         if (selectedFileId && fileIds.includes(selectedFileId)) {
             setSelectedFileId(null);
         }
+
+        void deleteFilesMutation.mutateAsync(fileIds);
     }
 
     function moveFiles(fileIds: string[], folderId: string | null) {
@@ -181,41 +186,29 @@ function Explorer() {
             return;
         }
 
-        setMovedFileFolderIds((current) => {
-            const next = { ...current };
-            fileIds.forEach((fileId) => {
-                next[fileId] = folderId;
-            });
-            return next;
-        });
-        setLocalFiles((current) => current.map((file) => (fileIds.includes(file.id) ? { ...file, folderId } : file)));
+        void moveFilesMutation.mutateAsync({ fileIds, folderId });
     }
 
     async function uploadExplorerMedia(input: UploadModalSubmitInput) {
-        const uploadedFiles = await Promise.all(
-            input.files.map(async (file) => {
-                const upload = await apiClient.uploads.create(adminSession.adminKey, file);
-                return {
-                    ...uploadToExplorerFile(upload),
-                    folderId: input.folderId
-                };
-            })
-        );
+        await Promise.all(input.files.map((file) => apiClient.explorer.uploadFile(adminSession.adminKey, file, input.folderId)));
 
-        const remoteFiles = input.remoteItems.map<ExplorerFile>((item) => ({
-            id: item.id,
-            name: item.title || item.url,
-            contentType: inferContentType(item.url),
-            createdAt: new Date().toISOString(),
-            folderId: input.folderId,
-            previewUrl: item.thumbnailUrl || item.url,
-            size: 0,
-            tags: [],
-            url: item.url
-        }));
+        if (input.remoteItems.length > 0) {
+            await apiClient.explorer.addRemoteMedia(adminSession.adminKey, {
+                folderId: input.folderId,
+                items: input.remoteItems.map((item) => ({
+                    thumbnailUrl: item.thumbnailUrl,
+                    title: item.title,
+                    url: item.url
+                }))
+            });
+        }
+    }
 
-        setLocalFiles((current) => [...remoteFiles, ...uploadedFiles, ...current]);
-        setUploadModalOpen(false);
+    function invalidateExplorerQueries() {
+        return Promise.all([
+            queryClient.invalidateQueries({ queryKey: ["explorer-folders", adminSession.adminKey] }),
+            queryClient.invalidateQueries({ queryKey: ["explorer-contents", adminSession.adminKey] })
+        ]);
     }
 
     if (!adminSession.isUnlocked && !adminSession.isChecking) {
@@ -238,8 +231,8 @@ function Explorer() {
                 folders={allFolders}
                 onFolderSelect={selectFolder}
                 storageTotal={180_000_000_000}
-                storageUsed={allFiles.reduce((total, file) => total + file.size, 0)}
-                totalItems={allFolders.length + allFiles.length}
+                storageUsed={visibleFiles.reduce((total, file) => total + file.size, 0)}
+                totalItems={allFolders.length + visibleFiles.length}
             />
             <ContentArea
                 activeFolder={activeFolder}
@@ -249,7 +242,8 @@ function Explorer() {
                 files={visibleFiles}
                 filter={filter}
                 folders={visibleFolders}
-                isLoadingFiles={uploads.isLoading}
+                isLoadingFiles={contentsQuery.isLoading || foldersQuery.isLoading}
+                isLoadingMoreFiles={contentsQuery.isFetching && !contentsQuery.isLoading}
                 loopEnabled={loopEnabled}
                 onAutoToggle={() => setAutoEnabled((current) => !current)}
                 onFavoriteToggle={toggleFavorite}
@@ -261,6 +255,8 @@ function Explorer() {
                 onFolderOpen={selectFolder}
                 onLock={lockDashboard}
                 onLoopToggle={() => setLoopEnabled((current) => !current)}
+                onLoadMoreFiles={loadMoreMedia}
+                onMediaPageSizeChange={updateMediaPageSize}
                 onModalClose={() => setSelectedFileId(null)}
                 onRandomFile={openRandomFile}
                 onSelectedFileChange={setSelectedFileId}
@@ -272,6 +268,8 @@ function Explorer() {
                 searchQuery={searchQuery}
                 selectedFile={selectedFile}
                 sort={sort}
+                totalFiles={mediaTotal}
+                canLoadMoreFiles={canLoadMoreMedia}
                 view={view}
             />
             {uploadModalOpen ? (

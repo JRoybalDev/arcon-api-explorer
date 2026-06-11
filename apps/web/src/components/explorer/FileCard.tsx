@@ -46,8 +46,8 @@ export function FileCard({ file, isSelected = false, isSelectionMode = false, vi
       layout
     >
       <button className="explorer-file-card__preview" type="button" onClick={handlePress} aria-label={isSelectionMode ? `Select ${file.name}` : `Open ${file.name}`}>
-        {isImage ? <img alt="" src={file.previewUrl} /> : null}
-        {isVideo ? <video muted playsInline src={file.url} /> : null}
+        {isImage ? <img alt="" loading="lazy" decoding="async" src={file.previewUrl} /> : null}
+        {isVideo ? <video muted playsInline preload="metadata" src={file.url} /> : null}
         {!isImage && !isVideo ? <Icon aria-hidden /> : null}
         {isSelectionMode ? (
           <span className="explorer-file-card__check" aria-hidden>

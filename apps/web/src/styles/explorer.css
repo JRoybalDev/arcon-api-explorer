@@ -251,6 +251,10 @@
   width: 30px;
 }
 
+.explorer-breadcrumb > .explorer-back-button {
+  display: none;
+}
+
 .explorer-back-button:hover {
   color: var(--explorer-accent-strong);
 }
@@ -258,6 +262,51 @@
 .explorer-breadcrumb strong {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.explorer-breadcrumb__mobile-title {
+  display: none;
+}
+
+.explorer-breadcrumb__trail {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.explorer-breadcrumb__trail button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--explorer-muted-strong);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  gap: 6px;
+  min-width: 0;
+  padding: 0;
+  transition: color 160ms ease;
+}
+
+.explorer-breadcrumb__trail button:hover,
+.explorer-breadcrumb__trail button[aria-current="page"] {
+  color: var(--explorer-text);
+}
+
+.explorer-breadcrumb__segment {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  min-width: 0;
+}
+
+.explorer-breadcrumb__segment > svg {
+  color: var(--explorer-muted);
+  flex: 0 0 auto;
+  height: 13px;
+  width: 13px;
 }
 
 .explorer-topbar__actions {
@@ -666,6 +715,56 @@
   grid-template-columns: repeat(auto-fill, minmax(430px, 560px));
 }
 
+.explorer-infinite-loader {
+  align-items: center;
+  color: var(--explorer-muted-strong);
+  display: inline-flex;
+  font-size: 0.78rem;
+  gap: 9px;
+  justify-self: center;
+  min-height: 40px;
+}
+
+.explorer-infinite-loader span {
+  animation: explorer-loader-spin 900ms linear infinite;
+  border: 2px solid rgba(224, 176, 127, 0.2);
+  border-top-color: var(--explorer-accent-strong);
+  border-radius: 999px;
+  display: inline-block;
+  height: 16px;
+  width: 16px;
+}
+
+@keyframes explorer-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.explorer-load-more {
+  justify-self: center;
+  background: rgba(185, 130, 85, 0.16);
+  border: 1px solid var(--explorer-line-strong);
+  border-radius: 6px;
+  color: var(--explorer-accent-strong);
+  cursor: pointer;
+  font-weight: 700;
+  min-width: 148px;
+  padding: 10px 18px;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.explorer-load-more:hover:not(:disabled) {
+  background: rgba(185, 130, 85, 0.24);
+  border-color: rgba(224, 176, 127, 0.35);
+  transform: translateY(-1px);
+}
+
+.explorer-load-more:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .explorer-folder-card {
   align-items: end;
   aspect-ratio: 16 / 9;
@@ -692,6 +791,34 @@
   width: 100%;
 }
 
+.explorer-folder-card--empty {
+  background:
+    linear-gradient(180deg, rgba(72, 43, 28, 0.82), rgba(24, 14, 10, 0.96)),
+    repeating-linear-gradient(135deg, rgba(224, 176, 127, 0.08) 0 1px, transparent 1px 16px);
+}
+
+.explorer-folder-card__placeholder {
+  align-items: center;
+  background: rgba(224, 176, 127, 0.15);
+  border: 1px solid rgba(224, 176, 127, 0.2);
+  border-radius: 8px;
+  color: var(--explorer-accent-strong);
+  display: inline-flex;
+  height: 52px;
+  justify-content: center;
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 52px;
+  z-index: 1;
+}
+
+.explorer-folder-card__placeholder svg {
+  height: 25px;
+  width: 25px;
+}
+
 .explorer-folder-card::before {
   background: linear-gradient(180deg, rgba(15, 11, 9, 0.08), rgba(15, 11, 9, 0.82));
   content: "";
@@ -715,7 +842,7 @@
 }
 
 .explorer-folder-card strong,
-.explorer-folder-card span {
+.explorer-folder-card__count {
   position: relative;
   z-index: 1;
 }
@@ -725,16 +852,20 @@
   font-weight: 850;
 }
 
-.explorer-folder-card > span {
+.explorer-folder-card__count {
   background: rgba(15, 11, 9, 0.76);
   border-radius: 4px;
   color: var(--explorer-muted-strong);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-size: 0.68rem;
+  max-width: calc(100% - 16px);
+  overflow: hidden;
   padding: 6px 7px;
   position: absolute;
   right: 8px;
+  text-overflow: ellipsis;
   top: 8px;
+  white-space: nowrap;
 }
 
 .explorer-file-card {
@@ -1738,11 +1869,17 @@
     font-size: 0.95rem;
   }
 
-  .explorer-back-button {
+  .explorer-breadcrumb > .explorer-back-button {
+    display: inline-flex;
     flex: 0 0 auto;
   }
 
-  .explorer-breadcrumb strong {
+  .explorer-breadcrumb__trail {
+    display: none;
+  }
+
+  .explorer-breadcrumb__mobile-title {
+    display: block;
     min-width: 0;
   }
 

@@ -3,7 +3,7 @@ export const openApiSpec = {
   info: {
     title: "Fullstack Template API",
     version: "0.1.0",
-    description: "Bun + Hono API for public site records, protected dashboard writes, uploads, and Better Auth."
+    description: "Hono API for explorer media, public site records, protected dashboard writes, uploads, and Better Auth."
   },
   servers: [{ url: "/" }],
   components: {

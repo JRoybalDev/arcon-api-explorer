@@ -1,4 +1,14 @@
-import { SiteListSchema, SiteSchema, UploadListSchema, UploadSchema, type SiteDraft } from "@fullstack-template/schema";
+import {
+  ExplorerContentsSchema,
+  ExplorerFolderSchema,
+  ExplorerMediaSchema,
+  SiteListSchema,
+  SiteSchema,
+  UploadListSchema,
+  UploadSchema,
+  type ExplorerMedia,
+  type SiteDraft
+} from "@fullstack-template/schema";
 import { apiJson, withAdminKey } from "./api";
 
 export type AuthConfig = {
@@ -212,6 +222,125 @@ export const apiClient = {
           `/api/uploads/${encodeURIComponent(uploadId)}`,
           withAdminKey(adminKey, {
             method: "DELETE"
+          })
+        )
+      );
+    }
+  },
+
+  explorer: {
+    async contents(
+      adminKey: string,
+      input: {
+        filter?: "all" | "image" | "video";
+        folderId?: string | null;
+        limit?: number;
+        offset?: number;
+        search?: string;
+        sort?: "newest" | "oldest" | "name";
+      } = {}
+    ) {
+      const params = new URLSearchParams();
+      if (input.folderId) {
+        params.set("folderId", input.folderId);
+      }
+      if (input.filter) {
+        params.set("filter", input.filter);
+      }
+      if (typeof input.limit === "number") {
+        params.set("limit", String(input.limit));
+      }
+      if (typeof input.offset === "number") {
+        params.set("offset", String(input.offset));
+      }
+      if (input.search) {
+        params.set("search", input.search);
+      }
+      if (input.sort) {
+        params.set("sort", input.sort);
+      }
+
+      const query = params.toString();
+      return ExplorerContentsSchema.parse(await apiJson(`/api/explorer/contents${query ? `?${query}` : ""}`, withAdminKey(adminKey)));
+    },
+
+    async listFolders(adminKey: string) {
+      return ExplorerFolderSchema.array().parse(await apiJson("/api/explorer/folders", withAdminKey(adminKey)));
+    },
+
+    async createFolder(adminKey: string, input: { name: string; parentId: string | null }) {
+      return ExplorerFolderSchema.parse(
+        await apiJson(
+          "/api/explorer/folders",
+          withAdminKey(adminKey, {
+            method: "POST",
+            body: JSON.stringify(input)
+          })
+        )
+      );
+    },
+
+    async uploadFile(adminKey: string, file: File, folderId: string | null) {
+      const form = new FormData();
+      form.append("file", file);
+      if (folderId) {
+        form.append("folderId", folderId);
+      }
+
+      return ExplorerMediaSchema.parse(
+        await apiJson(
+          "/api/explorer/media/upload",
+          withAdminKey(adminKey, {
+            method: "POST",
+            body: form
+          })
+        )
+      );
+    },
+
+    async addRemoteMedia(adminKey: string, input: { folderId: string | null; items: Array<{ tags?: string[]; thumbnailUrl?: string; title?: string; url: string }> }) {
+      return ExplorerMediaSchema.array().parse(
+        await apiJson(
+          "/api/explorer/media/remote",
+          withAdminKey(adminKey, {
+            method: "POST",
+            body: JSON.stringify(input)
+          })
+        )
+      );
+    },
+
+    async moveMedia(adminKey: string, input: { folderId: string | null; mediaIds: string[] }) {
+      return ExplorerMediaSchema.array().parse(
+        await apiJson(
+          "/api/explorer/media/move",
+          withAdminKey(adminKey, {
+            method: "POST",
+            body: JSON.stringify(input)
+          })
+        )
+      );
+    },
+
+    async deleteMedia(adminKey: string, mediaIds: string[]) {
+      return ExplorerMediaSchema.array().parse(
+        await apiJson(
+          "/api/explorer/media",
+          withAdminKey(adminKey, {
+            method: "DELETE",
+            body: JSON.stringify({ mediaIds })
+          })
+        )
+      );
+    },
+
+    async setFavorite(adminKey: string, mediaId: string, favorite: boolean): Promise<ExplorerMedia> {
+      return ExplorerMediaSchema.parse(
+        await apiJson(
+          `/api/explorer/media/${encodeURIComponent(mediaId)}/favorite`,
+          withAdminKey(adminKey, {
+            method: "POST",
+            body: JSON.stringify({ favorite })
           })
         )
       );

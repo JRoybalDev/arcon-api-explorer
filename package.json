@@ -11,7 +11,9 @@
     "db:up": "bun run scripts/compose.ts up -d db",
     "db:down": "bun run scripts/compose.ts down",
     "db:logs": "bun run scripts/compose.ts logs -f db",
-    "db:seed": "bun run --cwd apps/server db:seed"
+    "db:seed": "bun run --cwd apps/server db:seed",
+    "db:seed:explorer": "bun run --cwd apps/server db:seed:explorer",
+    "db:unseed:explorer": "bun run --cwd apps/server db:unseed:explorer"
   },
   "devDependencies": {
     "@types/bun": "^1.3.3",

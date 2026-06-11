@@ -21,6 +21,77 @@ export const UploadSchema = z.object({
 
 export const UploadListSchema = z.array(UploadSchema);
 
+export const ExplorerFolderSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1),
+  parentId: z.string().uuid().nullable(),
+  coverUrl: z.string().default(""),
+  folderCount: z.number().int().nonnegative().default(0),
+  itemCount: z.number().int().nonnegative().default(0),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime()
+});
+
+export const ExplorerMediaSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1),
+  contentType: z.string().min(1),
+  createdAt: z.string().datetime(),
+  duration: z.number().nullable().default(null),
+  favorite: z.boolean().default(false),
+  folderId: z.string().uuid().nullable(),
+  height: z.number().int().nullable().default(null),
+  previewUrl: z.string().default(""),
+  size: z.number().int().nonnegative(),
+  source: z.enum(["upload", "remote"]).or(z.string()).default("upload"),
+  storageKey: z.string().default(""),
+  storageProvider: z.enum(["local", "cloudinary", "remote"]).or(z.string()).default("local"),
+  storageResourceType: z.enum(["image", "video", "raw"]).or(z.string()).default("raw"),
+  tags: z.array(z.string()).default([]),
+  url: z.string().min(1),
+  width: z.number().int().nullable().default(null)
+});
+
+export const ExplorerContentsSchema = z.object({
+  folders: z.array(ExplorerFolderSchema),
+  media: z.array(ExplorerMediaSchema),
+  mediaLimit: z.number().int().nonnegative().default(120),
+  mediaOffset: z.number().int().nonnegative().default(0),
+  mediaTotal: z.number().int().nonnegative().default(0)
+});
+
+export const ExplorerCreateFolderInputSchema = z.object({
+  name: z.string().min(1).max(120),
+  parentId: z.string().uuid().nullable().optional()
+});
+
+export const ExplorerRemoteMediaInputSchema = z.object({
+  folderId: z.string().uuid().nullable().optional(),
+  items: z
+    .array(
+      z.object({
+        title: z.string().max(240).optional(),
+        url: z.string().url(),
+        thumbnailUrl: z.string().url().or(z.literal("")).optional(),
+        tags: z.array(z.string()).optional()
+      })
+    )
+    .min(1)
+});
+
+export const ExplorerMoveMediaInputSchema = z.object({
+  folderId: z.string().uuid().nullable().optional(),
+  mediaIds: z.array(z.string().uuid()).min(1)
+});
+
+export const ExplorerDeleteMediaInputSchema = z.object({
+  mediaIds: z.array(z.string().uuid()).min(1)
+});
+
+export const ExplorerFavoriteInputSchema = z.object({
+  favorite: z.boolean()
+});
+
 export const defaultSiteMetadata = {
   tabTitle: "",
   seoTitle: "",
@@ -197,6 +268,14 @@ export const ApiResponseSchema = z.union([ApiSuccessSchema, ApiErrorSchema]);
 export type Link = z.infer<typeof LinkSchema>;
 export type Upload = z.infer<typeof UploadSchema>;
 export type UploadList = z.infer<typeof UploadListSchema>;
+export type ExplorerFolder = z.infer<typeof ExplorerFolderSchema>;
+export type ExplorerMedia = z.infer<typeof ExplorerMediaSchema>;
+export type ExplorerContents = z.infer<typeof ExplorerContentsSchema>;
+export type ExplorerCreateFolderInput = z.infer<typeof ExplorerCreateFolderInputSchema>;
+export type ExplorerRemoteMediaInput = z.infer<typeof ExplorerRemoteMediaInputSchema>;
+export type ExplorerMoveMediaInput = z.infer<typeof ExplorerMoveMediaInputSchema>;
+export type ExplorerDeleteMediaInput = z.infer<typeof ExplorerDeleteMediaInputSchema>;
+export type ExplorerFavoriteInput = z.infer<typeof ExplorerFavoriteInputSchema>;
 export type SiteMetadata = z.infer<typeof SiteMetadataSchema>;
 export type SiteBranding = z.infer<typeof SiteBrandingSchema>;
 export type Site = z.infer<typeof SiteSchema>;

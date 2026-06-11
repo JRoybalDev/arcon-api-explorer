@@ -462,7 +462,7 @@ export function FileViewerModal({
 
     return (
       <>
-        {targetIsImage ? <img alt="" src={targetFile.previewUrl || targetFile.url} /> : null}
+        {targetIsImage ? <img alt="" src={targetFile.url} /> : null}
         {targetIsVideo ? <video controls={!hiddenVideoControls} muted={hiddenVideoControls} playsInline src={targetFile.url} /> : null}
         {!targetIsImage && !targetIsVideo ? <a href={targetFile.url}>Open file</a> : null}
       </>
@@ -559,7 +559,7 @@ export function FileViewerModal({
             transition: swipeState === "next" || swipeState === "previous" || swipeState === "reset" ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)" : "none"
           }}
         >
-          {isImage ? <img alt="" src={file.previewUrl || file.url} /> : null}
+          {isImage ? <img alt="" src={file.url} /> : null}
           {isVideo ? <video ref={videoRef} controls loop={loopEnabled && !autoEnabled} src={file.url} onEnded={handleVideoEnded} /> : null}
           {!isImage && !isVideo ? <a href={file.url}>Open file</a> : null}
         </div>

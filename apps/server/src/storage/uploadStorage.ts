@@ -1,5 +1,5 @@
 import { v2 as cloudinary, type UploadApiResponse } from "cloudinary";
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import type { UploadRow } from "../../db/schema";
@@ -32,7 +32,7 @@ async function storeLocalUpload(file: File): Promise<StoredUpload> {
 
   const safeName = `${crypto.randomUUID()}.${extensionFor(file)}`;
   const path = join(env.uploadDir, safeName);
-  await Bun.write(path, file);
+  await writeFile(path, Buffer.from(await file.arrayBuffer()));
   const thumbnail = await createThumbnail(file, env.uploadDir);
 
   return {

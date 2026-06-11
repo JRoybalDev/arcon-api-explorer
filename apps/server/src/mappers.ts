@@ -1,5 +1,5 @@
-import { SiteBrandingSchema, SiteMetadataSchema, type Site, type Upload } from "@fullstack-template/schema";
-import type { SiteRow, UploadRow } from "../db/schema";
+import { SiteBrandingSchema, SiteMetadataSchema, type ExplorerFolder, type ExplorerMedia, type Site, type Upload } from "@fullstack-template/schema";
+import type { ExplorerFolderRow, ExplorerMediaRow, SiteRow, UploadRow } from "../db/schema";
 
 export function toSite(row: SiteRow): Site {
   return {
@@ -28,5 +28,40 @@ export function toUpload(row: UploadRow): Upload {
     contentType: row.contentType,
     size: row.size,
     createdAt: row.createdAt.toISOString()
+  };
+}
+
+export function toExplorerFolder(row: ExplorerFolderRow, counts: { folderCount?: number; itemCount?: number } = {}): ExplorerFolder {
+  return {
+    id: row.id,
+    name: row.name,
+    parentId: row.parentId,
+    coverUrl: row.coverUrl,
+    folderCount: counts.folderCount ?? 0,
+    itemCount: counts.itemCount ?? 0,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString()
+  };
+}
+
+export function toExplorerMedia(row: ExplorerMediaRow): ExplorerMedia {
+  return {
+    id: row.id,
+    name: row.name,
+    contentType: row.contentType,
+    createdAt: row.createdAt.toISOString(),
+    duration: row.duration,
+    favorite: row.favorite,
+    folderId: row.folderId,
+    height: row.height,
+    previewUrl: row.previewUrl || row.url,
+    size: row.size,
+    source: row.source,
+    storageKey: row.storageKey,
+    storageProvider: row.storageProvider,
+    storageResourceType: row.storageResourceType,
+    tags: row.tags,
+    url: row.url,
+    width: row.width
   };
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type TouchEvent } from "react";
-import { FiArrowLeft, FiCheck, FiCheckCircle, FiChevronRight, FiFolder, FiFolderPlus, FiHelpCircle, FiLogOut, FiMoreVertical, FiMove, FiTrash2, FiUpload, FiX } from "react-icons/fi";
+import { FiArrowLeft, FiCheck, FiCheckCircle, FiChevronRight, FiFolder, FiFolderPlus, FiHelpCircle, FiHome, FiLogOut, FiMoreVertical, FiMove, FiTrash2, FiUpload, FiX } from "react-icons/fi";
 import { FileCard } from "./FileCard";
 import { FileViewerModal } from "./FileViewerModal";
 import { FiltersSearch } from "./FiltersSearch";
@@ -15,11 +15,14 @@ type ContentAreaProps = {
   filter: ExplorerFilter;
   folders: ExplorerFolder[];
   isLoadingFiles: boolean;
+  isLoadingMoreFiles?: boolean;
   loopEnabled: boolean;
   searchQuery: string;
   selectedFile: ExplorerFile | null;
   sort: ExplorerSort;
+  totalFiles?: number;
   view: ExplorerView;
+  canLoadMoreFiles?: boolean;
   onAutoToggle: () => void;
   onFavoriteToggle: (fileId: string) => void;
   onFolderBack: () => void;
@@ -27,9 +30,11 @@ type ContentAreaProps = {
   onFilesDelete: (fileIds: string[]) => void;
   onFilesMove: (fileIds: string[], folderId: string | null) => void;
   onFolderCreate: (folderName: string) => void;
-  onFolderOpen: (folderId: string) => void;
+  onFolderOpen: (folderId: string | null) => void;
   onLock: () => void;
   onLoopToggle: () => void;
+  onLoadMoreFiles?: () => void;
+  onMediaPageSizeChange?: (pageSize: number) => void;
   onModalClose: () => void;
   onRandomFile: () => void;
   onSelectedFileChange: (fileId: string) => void;
@@ -49,11 +54,14 @@ export function ContentArea({
   filter,
   folders,
   isLoadingFiles,
+  isLoadingMoreFiles = false,
   loopEnabled,
   searchQuery,
   selectedFile,
   sort,
+  totalFiles,
   view,
+  canLoadMoreFiles = false,
   onAutoToggle,
   onFavoriteToggle,
   onFolderBack,
@@ -64,6 +72,8 @@ export function ContentArea({
   onFolderOpen,
   onLock,
   onLoopToggle,
+  onLoadMoreFiles,
+  onMediaPageSizeChange,
   onModalClose,
   onRandomFile,
   onSelectedFileChange,
@@ -80,11 +90,29 @@ export function ContentArea({
   const [moveFolderId, setMoveFolderId] = useState<string | null>(activeFolder?.id ?? null);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [folderName, setFolderName] = useState("");
+  const fileGridRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const infiniteLoaderRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const selectedCount = selectedFileIds.length;
   const moveFolderName = moveFolderId ? allFolders.find((folder) => folder.id === moveFolderId)?.name ?? "Selected folder" : "All Media";
+  const breadcrumbFolders = useMemo(() => {
+    if (!activeFolder) {
+      return [];
+    }
+
+    const foldersById = new Map(allFolders.map((folder) => [folder.id, folder]));
+    const trail: ExplorerFolder[] = [];
+    let currentFolder: ExplorerFolder | undefined = activeFolder;
+
+    while (currentFolder) {
+      trail.unshift(currentFolder);
+      currentFolder = currentFolder.parentId ? foldersById.get(currentFolder.parentId) : undefined;
+    }
+
+    return trail;
+  }, [activeFolder, allFolders]);
   const folderTree = useMemo(() => buildFolderTree(allFolders), [allFolders]);
 
   useEffect(() => {
@@ -111,6 +139,53 @@ export function ContentArea({
   useEffect(() => {
     setMoveFolderId(activeFolder?.id ?? null);
   }, [activeFolder]);
+
+  useEffect(() => {
+    const grid = fileGridRef.current;
+
+    if (!grid || !onMediaPageSizeChange) {
+      return;
+    }
+
+    const measuredGrid = grid;
+    const updateMeasuredPageSize = onMediaPageSizeChange;
+
+    function updatePageSize() {
+      const columns = window.getComputedStyle(measuredGrid).gridTemplateColumns.split(" ").filter(Boolean).length || 1;
+      updateMeasuredPageSize(Math.max(20, columns * 20));
+    }
+
+    updatePageSize();
+    const resizeObserver = new ResizeObserver(updatePageSize);
+    resizeObserver.observe(measuredGrid);
+    return () => resizeObserver.disconnect();
+  }, [onMediaPageSizeChange, view]);
+
+  useEffect(() => {
+    const loader = infiniteLoaderRef.current;
+
+    if (!loader || !canLoadMoreFiles || isLoadingFiles || isLoadingMoreFiles || !onLoadMoreFiles) {
+      return;
+    }
+
+    const loadMoreFiles = onLoadMoreFiles;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          loadMoreFiles();
+        }
+      },
+      {
+        root: loader.closest(".explorer-main"),
+        rootMargin: "720px 0px 720px 0px",
+        threshold: 0
+      }
+    );
+
+    observer.observe(loader);
+    return () => observer.disconnect();
+  }, [canLoadMoreFiles, files.length, isLoadingFiles, isLoadingMoreFiles, onLoadMoreFiles]);
 
   function cancelFolderCreate() {
     setCreateFolderOpen(false);
@@ -212,7 +287,21 @@ export function ContentArea({
           <button className="explorer-back-button" type="button" onClick={onFolderBack} aria-label="Go up one folder">
             <FiArrowLeft aria-hidden />
           </button>
-          <strong>{activeFolder?.name ?? "All Media"}</strong>
+          <strong className="explorer-breadcrumb__mobile-title">{activeFolder?.name ?? "All Media"}</strong>
+          <nav className="explorer-breadcrumb__trail" aria-label="Current folder">
+            <button type="button" onClick={() => onFolderOpen(null)}>
+              <FiHome aria-hidden />
+              Home
+            </button>
+            {breadcrumbFolders.map((folder) => (
+              <span className="explorer-breadcrumb__segment" key={folder.id}>
+                <FiChevronRight aria-hidden />
+                <button type="button" onClick={() => onFolderOpen(folder.id)} aria-current={folder.id === activeFolder?.id ? "page" : undefined}>
+                  {folder.name}
+                </button>
+              </span>
+            ))}
+          </nav>
         </div>
         <div className="explorer-topbar__actions">
           {createFolderOpen ? (
@@ -343,7 +432,7 @@ export function ContentArea({
 
         <section className="explorer-section" aria-labelledby="explorer-files-heading">
           <div className="explorer-section__label" id="explorer-files-heading">
-            Files <span>{files.length}</span>
+            Files <span>{totalFiles ?? files.length}</span>
           </div>
           {isLoadingFiles ? <p className="explorer-empty">Loading files...</p> : null}
           {!isLoadingFiles && files.length === 0 ? <p className="explorer-empty">No files match this view.</p> : null}
@@ -355,7 +444,7 @@ export function ContentArea({
               <span>Date</span>
             </div>
           ) : null}
-          <div className={`explorer-file-grid explorer-file-grid--${view}`}>
+          <div className={`explorer-file-grid explorer-file-grid--${view}`} ref={fileGridRef}>
             {files.map((file) => (
               <FileCard
                 file={file}
@@ -368,6 +457,12 @@ export function ContentArea({
               />
             ))}
           </div>
+          {canLoadMoreFiles ? (
+            <div className="explorer-infinite-loader" ref={infiniteLoaderRef} role="status" aria-live="polite">
+              <span aria-hidden />
+              {isLoadingMoreFiles ? "Loading more..." : "Scroll for more"}
+            </div>
+          ) : null}
         </section>
       </main>
 

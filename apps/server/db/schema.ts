@@ -1,4 +1,4 @@
-import { boolean, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, integer, jsonb, pgTable, text, timestamp, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { defaultSiteBranding, defaultSiteMetadata, type SiteBranding } from "@fullstack-template/schema";
 
 export const sites = pgTable("sites", {
@@ -31,6 +31,37 @@ export const uploads = pgTable("uploads", {
   contentType: text("content_type").notNull(),
   size: integer("size").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+});
+
+export const explorerFolders = pgTable("explorer_folders", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  parentId: uuid("parent_id").references((): AnyPgColumn => explorerFolders.id, { onDelete: "cascade" }),
+  coverUrl: text("cover_url").notNull().default(""),
+  storageKey: text("storage_key").notNull().default(""),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+});
+
+export const explorerMedia = pgTable("explorer_media", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  url: text("url").notNull(),
+  previewUrl: text("preview_url").notNull().default(""),
+  contentType: text("content_type").notNull(),
+  source: text("source").notNull().default("upload"),
+  storageProvider: text("storage_provider").notNull().default("local"),
+  storageKey: text("storage_key").notNull().default(""),
+  storageResourceType: text("storage_resource_type").notNull().default("raw"),
+  size: integer("size").notNull().default(0),
+  width: integer("width"),
+  height: integer("height"),
+  duration: integer("duration"),
+  favorite: boolean("favorite").notNull().default(false),
+  folderId: uuid("folder_id").references(() => explorerFolders.id, { onDelete: "set null" }),
+  tags: jsonb("tags").$type<string[]>().notNull().default([]),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 });
 
 export const user = pgTable("user", {
@@ -91,3 +122,5 @@ export const verification = pgTable("verification", {
 export type SiteRow = typeof sites.$inferSelect;
 export type NewSiteRow = typeof sites.$inferInsert;
 export type UploadRow = typeof uploads.$inferSelect;
+export type ExplorerFolderRow = typeof explorerFolders.$inferSelect;
+export type ExplorerMediaRow = typeof explorerMedia.$inferSelect;

@@ -22,7 +22,7 @@ export const securityHeaders: MiddlewareHandler = async (c, next) => {
 
   c.header("Content-Security-Policy", csp);
   c.header("Cross-Origin-Opener-Policy", "same-origin");
-  c.header("Cross-Origin-Resource-Policy", "same-origin");
+  c.header("Cross-Origin-Resource-Policy", c.req.path.startsWith("/content/") ? "cross-origin" : "same-origin");
   c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
   c.header("Referrer-Policy", "strict-origin-when-cross-origin");
   c.header("X-Content-Type-Options", "nosniff");

@@ -41,11 +41,20 @@ export const env = {
   securityHstsEnabled: process.env.SECURITY_HSTS_ENABLED === "true",
   storageDriver,
   uploadDir: process.env.UPLOAD_DIR ?? "uploads",
+  contentRoot: process.env.CONTENT_ROOT ?? "/mnt/ARCON-CLOUD",
+  cdnBaseUrl: (process.env.CDN_BASE_URL ?? process.env.PUBLIC_API_URL ?? "https://arcon-api.duckdns.org:7777").replace(/\/+$/, ""),
+  autoPopulateExplorer: process.env.AUTO_POPULATE_EXPLORER !== "false",
+  populateExplorerIntervalMs: Number(process.env.POPULATE_EXPLORER_INTERVAL_MS ?? 60 * 60 * 1000),
+  populateExplorerOnStartup: process.env.POPULATE_EXPLORER_ON_STARTUP !== "false",
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET,
   cloudinaryFolder: process.env.CLOUDINARY_FOLDER ?? "fullstack-template",
   publicApiUrl: process.env.PUBLIC_API_URL ?? "http://localhost:3001",
   webOrigin: process.env.WEB_ORIGIN ?? "http://localhost:5173",
-  corsOrigins: splitList(process.env.CORS_ORIGINS, [process.env.WEB_ORIGIN ?? "http://localhost:5173", "http://127.0.0.1:5173"])
+  corsOrigins: splitList(process.env.CORS_ORIGINS, [
+    process.env.WEB_ORIGIN ?? "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    process.env.PUBLIC_API_URL ?? "https://arcon-api.duckdns.org:7777"
+  ])
 };
