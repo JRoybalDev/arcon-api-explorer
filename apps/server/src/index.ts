@@ -26,6 +26,8 @@ import type { AppVariables } from "./types";
 const app = new Hono<{ Variables: AppVariables }>();
 const adminRateLimit = createRateLimit({ name: "admin", windowSeconds: env.adminRateLimitWindow, max: env.adminRateLimitMax });
 const uploadRateLimit = createRateLimit({ name: "uploads", windowSeconds: env.uploadRateLimitWindow, max: env.uploadRateLimitMax });
+const webDistRoot = "../web/dist";
+const serveWebIndex = serveStatic({ root: webDistRoot, path: "index.html" });
 
 function contentTypeForPath(path: string) {
   const extension = extname(path).toLowerCase();
@@ -101,7 +103,7 @@ app.get("/openapi.json", (c) => c.json(openApiSpec));
 
 app.get("/docs", (c) => c.html(openApiHtml()));
 
-app.get("/", (c) =>
+app.get("/api", (c) =>
   ok(c, {
     ok: true,
     service: "arcon-api",
@@ -174,6 +176,15 @@ app.get("/content/*", async (c) => {
     return fail(c, "Content not found", 404, { code: "CONTENT_NOT_FOUND" });
   }
 });
+
+app.use("/assets/*", serveStatic({ root: webDistRoot }));
+app.use("/pwa/*", serveStatic({ root: webDistRoot }));
+app.get("/favicon.svg", serveStatic({ root: webDistRoot }));
+app.get("/manifest.webmanifest", serveStatic({ root: webDistRoot }));
+app.get("/sw.js", serveStatic({ root: webDistRoot }));
+app.get("/", serveWebIndex);
+app.get("/dashboard", serveWebIndex);
+app.get("/reset-password", serveWebIndex);
 
 app.notFound((c) => fail(c, "Route not found", 404, { code: "ROUTE_NOT_FOUND" }));
 
