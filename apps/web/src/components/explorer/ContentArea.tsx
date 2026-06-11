@@ -1,5 +1,5 @@
-import { useRef, useState, type TouchEvent } from "react";
-import { FiArrowLeft, FiCheckCircle, FiFolderPlus, FiHelpCircle, FiLogOut, FiMoreVertical, FiUpload } from "react-icons/fi";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type TouchEvent } from "react";
+import { FiArrowLeft, FiCheck, FiCheckCircle, FiChevronRight, FiFolder, FiFolderPlus, FiHelpCircle, FiLogOut, FiMoreVertical, FiMove, FiTrash2, FiUpload, FiX } from "react-icons/fi";
 import { FileCard } from "./FileCard";
 import { FileViewerModal } from "./FileViewerModal";
 import { FiltersSearch } from "./FiltersSearch";
@@ -8,6 +8,7 @@ import type { ExplorerFile, ExplorerFilter, ExplorerFolder, ExplorerSort, Explor
 
 type ContentAreaProps = {
   activeFolder: ExplorerFolder | null;
+  allFolders: ExplorerFolder[];
   autoEnabled: boolean;
   favoriteIds: string[];
   files: ExplorerFile[];
@@ -23,7 +24,9 @@ type ContentAreaProps = {
   onFavoriteToggle: (fileId: string) => void;
   onFolderBack: () => void;
   onFilterChange: (filter: ExplorerFilter) => void;
-  onFolderCreate: () => void;
+  onFilesDelete: (fileIds: string[]) => void;
+  onFilesMove: (fileIds: string[], folderId: string | null) => void;
+  onFolderCreate: (folderName: string) => void;
   onFolderOpen: (folderId: string) => void;
   onLock: () => void;
   onLoopToggle: () => void;
@@ -39,6 +42,7 @@ type ContentAreaProps = {
 
 export function ContentArea({
   activeFolder,
+  allFolders,
   autoEnabled,
   favoriteIds,
   files,
@@ -54,6 +58,8 @@ export function ContentArea({
   onFavoriteToggle,
   onFolderBack,
   onFilterChange,
+  onFilesDelete,
+  onFilesMove,
   onFolderCreate,
   onFolderOpen,
   onLock,
@@ -68,8 +74,114 @@ export function ContentArea({
   onViewChange
 }: ContentAreaProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
+  const [bulkDialog, setBulkDialog] = useState<"move" | "delete" | null>(null);
+  const [moveFolderId, setMoveFolderId] = useState<string | null>(activeFolder?.id ?? null);
+  const [createFolderOpen, setCreateFolderOpen] = useState(false);
+  const [folderName, setFolderName] = useState("");
+  const menuRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
+  const selectedCount = selectedFileIds.length;
+  const moveFolderName = moveFolderId ? allFolders.find((folder) => folder.id === moveFolderId)?.name ?? "Selected folder" : "All Media";
+  const folderTree = useMemo(() => buildFolderTree(allFolders), [allFolders]);
+
+  useEffect(() => {
+    if (!menuOpen) {
+      return;
+    }
+
+    function closeOnOutsidePointer(event: PointerEvent) {
+      if (menuRef.current?.contains(event.target as Node)) {
+        return;
+      }
+
+      setMenuOpen(false);
+    }
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePointer);
+  }, [menuOpen]);
+
+  useEffect(() => {
+    setSelectedFileIds((current) => current.filter((fileId) => files.some((file) => file.id === fileId)));
+  }, [files]);
+
+  useEffect(() => {
+    setMoveFolderId(activeFolder?.id ?? null);
+  }, [activeFolder]);
+
+  function cancelFolderCreate() {
+    setCreateFolderOpen(false);
+    setFolderName("");
+  }
+
+  function submitFolderCreate() {
+    const nextFolderName = folderName.trim();
+
+    if (!nextFolderName) {
+      return;
+    }
+
+    onFolderCreate(nextFolderName);
+    cancelFolderCreate();
+  }
+
+  function selectFilter(nextFilter: ExplorerFilter) {
+    onFilterChange(nextFilter);
+    setMenuOpen(false);
+  }
+
+  function selectSort(nextSort: ExplorerSort) {
+    onSortChange(nextSort);
+    setMenuOpen(false);
+  }
+
+  function selectItems() {
+    setSelectionMode(true);
+    setSelectedFileIds([]);
+    setMenuOpen(false);
+  }
+
+  function cancelSelection() {
+    setSelectionMode(false);
+    setSelectedFileIds([]);
+    setBulkDialog(null);
+  }
+
+  function toggleFileSelection(fileId: string) {
+    setSelectedFileIds((current) => (current.includes(fileId) ? current.filter((id) => id !== fileId) : [...current, fileId]));
+  }
+
+  function openBulkDialog(nextDialog: "move" | "delete") {
+    if (selectedCount === 0) {
+      return;
+    }
+
+    setBulkDialog(nextDialog);
+  }
+
+  function confirmDeleteFiles() {
+    onFilesDelete(selectedFileIds);
+    cancelSelection();
+  }
+
+  function confirmMoveFiles() {
+    onFilesMove(selectedFileIds, moveFolderId);
+    cancelSelection();
+  }
+
+  function closeOnBackdropClick(event: MouseEvent<HTMLDivElement>, close: () => void) {
+    if (event.target === event.currentTarget) {
+      close();
+    }
+  }
+
+  function signOut() {
+    onLock();
+    setMenuOpen(false);
+  }
 
   function handleTouchStart(event: TouchEvent<HTMLElement>) {
     touchStartX.current = event.touches[0]?.clientX ?? null;
@@ -103,13 +215,35 @@ export function ContentArea({
           <strong>{activeFolder?.name ?? "All Media"}</strong>
         </div>
         <div className="explorer-topbar__actions">
-          <button className="explorer-upload-button" type="button" onClick={onUploadOpen}>
-            <FiUpload aria-hidden /> Upload
-          </button>
-          <button className="explorer-icon-button" type="button" onClick={onFolderCreate} title="Create folder" aria-label="Create folder">
-            <FiFolderPlus aria-hidden />
-          </button>
-          <div className="explorer-menu">
+          {createFolderOpen ? (
+            <div className="explorer-create-folder-inline">
+              <input autoFocus placeholder="Folder name" value={folderName} onChange={(event) => setFolderName(event.target.value)} onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  submitFolderCreate();
+                }
+
+                if (event.key === "Escape") {
+                  cancelFolderCreate();
+                }
+              }} />
+              <button type="button" onClick={submitFolderCreate}>
+                Create
+              </button>
+              <button type="button" onClick={cancelFolderCreate}>
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <>
+              <button className="explorer-upload-button" type="button" onClick={onUploadOpen}>
+                <FiUpload aria-hidden /> Upload
+              </button>
+              <button className="explorer-icon-button" type="button" onClick={() => setCreateFolderOpen(true)} title="Create folder" aria-label="Create folder">
+                <FiFolderPlus aria-hidden />
+              </button>
+            </>
+          )}
+          <div className="explorer-menu" ref={menuRef}>
             <button
               aria-expanded={menuOpen}
               aria-haspopup="menu"
@@ -130,7 +264,7 @@ export function ContentArea({
                     { label: "Images", value: "image" as const },
                     { label: "Videos", value: "video" as const }
                   ].map((option) => (
-                    <button key={option.value} type="button" role="menuitemradio" aria-checked={filter === option.value} onClick={() => onFilterChange(option.value)}>
+                    <button key={option.value} type="button" role="menuitemradio" aria-checked={filter === option.value} onClick={() => selectFilter(option.value)}>
                       {option.label}
                       {filter === option.value ? <FiCheckCircle aria-hidden /> : null}
                     </button>
@@ -144,21 +278,21 @@ export function ContentArea({
                     { label: "Date (Oldest)", value: "oldest" as const },
                     { label: "Name (A-Z)", value: "name" as const }
                   ].map((option) => (
-                    <button key={option.value} type="button" role="menuitemradio" aria-checked={sort === option.value} onClick={() => onSortChange(option.value)}>
+                    <button key={option.value} type="button" role="menuitemradio" aria-checked={sort === option.value} onClick={() => selectSort(option.value)}>
                       {option.label}
                       {sort === option.value ? <FiCheckCircle aria-hidden /> : null}
                     </button>
                   ))}
                 </div>
 
-                <button className="explorer-menu__item" type="button" role="menuitem">
+                <button className="explorer-menu__item" type="button" role="menuitem" onClick={selectItems}>
                   Select Items
                   <FiCheckCircle aria-hidden />
                 </button>
 
                 <div className="explorer-menu__group">
                   <span>Settings</span>
-                  <button type="button" role="menuitem" onClick={onLock}>
+                  <button type="button" role="menuitem" onClick={signOut}>
                     Sign out
                     <FiLogOut aria-hidden />
                   </button>
@@ -177,6 +311,23 @@ export function ContentArea({
       />
 
       <main className="explorer-main">
+        {selectionMode ? (
+          <div className="explorer-selection-bar" role="status">
+            <strong>{selectedCount} selected</strong>
+            <div>
+              <button type="button" onClick={() => openBulkDialog("move")} disabled={selectedCount === 0}>
+                <FiMove aria-hidden /> Move
+              </button>
+              <button className="explorer-selection-bar__danger" type="button" onClick={() => openBulkDialog("delete")} disabled={selectedCount === 0}>
+                <FiTrash2 aria-hidden /> Delete
+              </button>
+              <button type="button" onClick={cancelSelection}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         {folders.length > 0 && view !== "list" ? (
           <section className="explorer-section" aria-labelledby="explorer-folders-heading">
             <div className="explorer-section__label" id="explorer-folders-heading">
@@ -206,7 +357,15 @@ export function ContentArea({
           ) : null}
           <div className={`explorer-file-grid explorer-file-grid--${view}`}>
             {files.map((file) => (
-              <FileCard file={file} key={file.id} onOpen={onSelectedFileChange} view={view} />
+              <FileCard
+                file={file}
+                isSelected={selectedFileIds.includes(file.id)}
+                isSelectionMode={selectionMode}
+                key={file.id}
+                onOpen={onSelectedFileChange}
+                onSelectToggle={toggleFileSelection}
+                view={view}
+              />
             ))}
           </div>
         </section>
@@ -215,6 +374,89 @@ export function ContentArea({
       <button className="explorer-help-button" type="button" aria-label="Help">
         <FiHelpCircle aria-hidden />
       </button>
+
+      {createFolderOpen ? (
+        <div className="explorer-create-folder-modal" role="dialog" aria-modal="true" aria-label="Create folder" onClick={(event) => closeOnBackdropClick(event, cancelFolderCreate)}>
+          <div className="explorer-create-folder-modal__panel" onClick={(event) => event.stopPropagation()}>
+            <header>
+              <div>
+                <h2>Create Folder</h2>
+                <p>{activeFolder ? `Inside ${activeFolder.name}` : "Inside All Media"}</p>
+              </div>
+              <button type="button" onClick={cancelFolderCreate} aria-label="Close create folder modal">
+                <FiX aria-hidden />
+              </button>
+            </header>
+            <label>
+              <span>Folder Name</span>
+              <input autoFocus placeholder="New folder" value={folderName} onChange={(event) => setFolderName(event.target.value)} />
+            </label>
+            <footer>
+              <button type="button" onClick={cancelFolderCreate}>
+                Cancel
+              </button>
+              <button type="button" onClick={submitFolderCreate}>
+                Create
+              </button>
+            </footer>
+          </div>
+        </div>
+      ) : null}
+
+      {bulkDialog === "delete" ? (
+        <div className="explorer-bulk-modal" role="dialog" aria-modal="true" aria-labelledby="explorer-delete-title" onClick={(event) => closeOnBackdropClick(event, () => setBulkDialog(null))}>
+          <div className="explorer-bulk-modal__panel explorer-bulk-modal__panel--small" onClick={(event) => event.stopPropagation()}>
+            <header>
+              <h2 id="explorer-delete-title">Delete {selectedCount} item{selectedCount === 1 ? "" : "s"}?</h2>
+              <button type="button" onClick={() => setBulkDialog(null)} aria-label="Close delete confirmation">
+                <FiX aria-hidden />
+              </button>
+            </header>
+            <p>These files will be removed from the explorer view.</p>
+            <footer>
+              <button type="button" onClick={() => setBulkDialog(null)}>
+                Cancel
+              </button>
+              <button className="explorer-bulk-modal__danger" type="button" onClick={confirmDeleteFiles}>
+                Delete
+              </button>
+            </footer>
+          </div>
+        </div>
+      ) : null}
+
+      {bulkDialog === "move" ? (
+        <div className="explorer-bulk-modal" role="dialog" aria-modal="true" aria-labelledby="explorer-move-title" onClick={(event) => closeOnBackdropClick(event, () => setBulkDialog(null))}>
+          <div className="explorer-bulk-modal__panel" onClick={(event) => event.stopPropagation()}>
+            <header>
+              <h2 id="explorer-move-title">Move {selectedCount} item{selectedCount === 1 ? "" : "s"} to...</h2>
+              <button type="button" onClick={() => setBulkDialog(null)} aria-label="Close move dialog">
+                <FiX aria-hidden />
+              </button>
+            </header>
+            <div className="explorer-move-tree" role="tree" aria-label="Folder destinations">
+              <MoveFolderRow depth={0} folder={null} isSelected={moveFolderId === null} label="All Media" onSelect={() => setMoveFolderId(null)} />
+              {folderTree.map((folder) => (
+                <MoveFolderBranch depth={0} folder={folder} key={folder.id} selectedFolderId={moveFolderId} onSelect={setMoveFolderId} />
+              ))}
+            </div>
+            <button className="explorer-move-new-folder" type="button" onClick={() => {
+              setBulkDialog(null);
+              setCreateFolderOpen(true);
+            }}>
+              <FiFolderPlus aria-hidden /> New Folder in "{moveFolderName}"
+            </button>
+            <footer>
+              <button type="button" onClick={() => setBulkDialog(null)}>
+                Cancel
+              </button>
+              <button type="button" onClick={confirmMoveFiles}>
+                Move Here
+              </button>
+            </footer>
+          </div>
+        </div>
+      ) : null}
 
       {selectedFile ? (
         <FileViewerModal
@@ -234,4 +476,90 @@ export function ContentArea({
       ) : null}
     </section>
   );
+}
+
+type FolderTreeNode = ExplorerFolder & {
+  children: FolderTreeNode[];
+};
+
+type MoveFolderBranchProps = {
+  depth: number;
+  folder: FolderTreeNode;
+  selectedFolderId: string | null;
+  onSelect: (folderId: string) => void;
+};
+
+function MoveFolderBranch({ depth, folder, selectedFolderId, onSelect }: MoveFolderBranchProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const hasChildren = folder.children.length > 0;
+
+  return (
+    <>
+      <MoveFolderRow
+        depth={depth}
+        folder={folder}
+        isOpen={isOpen}
+        isSelected={selectedFolderId === folder.id}
+        label={folder.name}
+        onSelect={() => onSelect(folder.id)}
+        onToggle={hasChildren ? () => setIsOpen((current) => !current) : undefined}
+      />
+      {hasChildren && isOpen
+        ? folder.children.map((child) => <MoveFolderBranch depth={depth + 1} folder={child} key={child.id} selectedFolderId={selectedFolderId} onSelect={onSelect} />)
+        : null}
+    </>
+  );
+}
+
+type MoveFolderRowProps = {
+  depth: number;
+  folder: ExplorerFolder | null;
+  isOpen?: boolean;
+  isSelected: boolean;
+  label: string;
+  onSelect: () => void;
+  onToggle?: () => void;
+};
+
+function MoveFolderRow({ depth, folder, isOpen = false, isSelected, label, onSelect, onToggle }: MoveFolderRowProps) {
+  return (
+    <div className="explorer-move-tree__row" role="treeitem" aria-selected={isSelected} style={{ paddingLeft: `${depth * 18 + 6}px` } as CSSProperties}>
+      <button className="explorer-move-tree__twist" type="button" onClick={onToggle ?? onSelect} aria-label={onToggle ? `${isOpen ? "Collapse" : "Expand"} ${label}` : `Select ${label}`}>
+        {onToggle ? <FiChevronRight aria-hidden className={isOpen ? "is-open" : ""} /> : null}
+      </button>
+      <button className="explorer-move-tree__folder" type="button" onClick={onSelect}>
+        {isSelected ? <FiCheck aria-hidden /> : <FiFolder aria-hidden />}
+        <span>{folder?.name ?? label}</span>
+      </button>
+    </div>
+  );
+}
+
+function buildFolderTree(folders: ExplorerFolder[]): FolderTreeNode[] {
+  const nodes = new Map<string, FolderTreeNode>();
+  const roots: FolderTreeNode[] = [];
+
+  folders.forEach((folder) => {
+    nodes.set(folder.id, { ...folder, children: [] });
+  });
+
+  nodes.forEach((node) => {
+    if (node.parentId && nodes.has(node.parentId)) {
+      nodes.get(node.parentId)?.children.push(node);
+      return;
+    }
+
+    roots.push(node);
+  });
+
+  return sortFolderNodes(roots);
+}
+
+function sortFolderNodes(nodes: FolderTreeNode[]): FolderTreeNode[] {
+  return nodes
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((node) => ({
+      ...node,
+      children: sortFolderNodes(node.children)
+    }));
 }

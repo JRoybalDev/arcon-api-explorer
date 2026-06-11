@@ -1,4 +1,4 @@
-import { type ChangeEvent, type DragEvent, type ReactNode, useMemo, useState } from "react";
+import { type ChangeEvent, type DragEvent, type ReactNode, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { FiCode, FiLink, FiList, FiUpload, FiX } from "react-icons/fi";
 import type { ExplorerFolder } from "./types";
@@ -49,9 +49,27 @@ export function UploadModal({ currentFolderId, folders, isUploading, onClose, on
   const [singleTitle, setSingleTitle] = useState("");
   const [singleUrl, setSingleUrl] = useState("");
   const [singleThumbnailUrl, setSingleThumbnailUrl] = useState("");
+  const [isMobileUpload, setIsMobileUpload] = useState(false);
 
   const folderOptions = useMemo(() => buildFolderOptions(folders), [folders]);
   const canUpload = files.length > 0 || remoteItems.length > 0;
+
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 680px)");
+
+    function updateUploadMode() {
+      setIsMobileUpload(query.matches);
+
+      if (query.matches) {
+        setActiveTab("files");
+        setDestinationFolderId(currentFolderId ?? "");
+      }
+    }
+
+    updateUploadMode();
+    query.addEventListener("change", updateUploadMode);
+    return () => query.removeEventListener("change", updateUploadMode);
+  }, [currentFolderId]);
 
   function addFiles(selectedFiles: FileList | File[]) {
     setFiles((current) => [...current, ...Array.from(selectedFiles)]);
@@ -140,48 +158,66 @@ export function UploadModal({ currentFolderId, folders, isUploading, onClose, on
 
     await onSubmit({
       files,
-      folderId: destinationFolderId || null,
+      folderId: isMobileUpload ? currentFolderId : destinationFolderId || null,
       remoteItems
     });
   }
 
   return (
-    <motion.div className="explorer-upload-modal" role="dialog" aria-modal="true" aria-label="Upload media" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.18 }}>
+    <motion.div
+      className="explorer-upload-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Upload media"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.18 }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <motion.div
         className="explorer-upload-modal__panel"
         initial={{ opacity: 0, y: 18, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+        onClick={(event) => event.stopPropagation()}
       >
         <header className="explorer-upload-modal__header">
           <div>
             <h2>Upload Media</h2>
-            <p>Add files or URLs to upload</p>
+            <p>{isMobileUpload ? "Add files to upload" : "Add files or URLs to upload"}</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close upload modal">
             <FiX aria-hidden />
           </button>
         </header>
 
-        <div className="explorer-upload-tabs" role="tablist" aria-label="Upload source">
-          <TabButton activeTab={activeTab} icon={<FiUpload aria-hidden />} label="Upload Files" tab="files" onChange={setActiveTab} />
-          <TabButton activeTab={activeTab} icon={<FiLink aria-hidden />} label="Add URL" tab="url" onChange={setActiveTab} />
-          <TabButton activeTab={activeTab} icon={<FiList aria-hidden />} label="Bulk URLs" tab="bulk" onChange={setActiveTab} />
-          <TabButton activeTab={activeTab} icon={<FiCode aria-hidden />} label="JSON Import" tab="json" onChange={setActiveTab} />
-        </div>
+        {!isMobileUpload ? (
+          <div className="explorer-upload-tabs" role="tablist" aria-label="Upload source">
+            <TabButton activeTab={activeTab} icon={<FiUpload aria-hidden />} label="Upload Files" tab="files" onChange={setActiveTab} />
+            <TabButton activeTab={activeTab} icon={<FiLink aria-hidden />} label="Add URL" tab="url" onChange={setActiveTab} />
+            <TabButton activeTab={activeTab} icon={<FiList aria-hidden />} label="Bulk URLs" tab="bulk" onChange={setActiveTab} />
+            <TabButton activeTab={activeTab} icon={<FiCode aria-hidden />} label="JSON Import" tab="json" onChange={setActiveTab} />
+          </div>
+        ) : null}
 
         <section className="explorer-upload-modal__body">
-          <label className="explorer-upload-field">
-            <span>Destination Folder</span>
-            <select value={destinationFolderId} onChange={(event) => setDestinationFolderId(event.target.value)}>
-              <option value="">Root (no folder)</option>
-              {folderOptions.map((folder) => (
-                <option key={folder.id} value={folder.id}>
-                  {folder.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          {!isMobileUpload ? (
+            <label className="explorer-upload-field">
+              <span>Destination Folder</span>
+              <select value={destinationFolderId} onChange={(event) => setDestinationFolderId(event.target.value)}>
+                <option value="">Root (no folder)</option>
+                {folderOptions.map((folder) => (
+                  <option key={folder.id} value={folder.id}>
+                    {folder.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
 
           {activeTab === "files" ? (
             <label className="explorer-upload-dropzone" onDragOver={(event) => event.preventDefault()} onDrop={dropFiles}>

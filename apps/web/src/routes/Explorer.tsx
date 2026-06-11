@@ -19,8 +19,10 @@ function Explorer() {
     const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
     const [filter, setFilter] = useState<ExplorerFilter>("all");
     const [loopEnabled, setLoopEnabled] = useState(false);
+    const [deletedFileIds, setDeletedFileIds] = useState<string[]>([]);
     const [localFiles, setLocalFiles] = useState<ExplorerFile[]>([]);
     const [localFolders, setLocalFolders] = useState<ExplorerFolder[]>([]);
+    const [movedFileFolderIds, setMovedFileFolderIds] = useState<Record<string, string | null>>({});
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
     const [shuffleSeed, setShuffleSeed] = useState(0);
@@ -57,8 +59,10 @@ function Explorer() {
 
     const allFiles = useMemo<ExplorerFile[]>(() => {
         const uploadedFiles = uploads.data?.map(uploadToExplorerFile) ?? [];
-        return [...sampleExplorerFiles, ...uploadedFiles, ...localFiles];
-    }, [localFiles, uploads.data]);
+        return [...sampleExplorerFiles, ...uploadedFiles, ...localFiles]
+            .filter((file) => !deletedFileIds.includes(file.id))
+            .map((file) => (Object.prototype.hasOwnProperty.call(movedFileFolderIds, file.id) ? { ...file, folderId: movedFileFolderIds[file.id] ?? null } : file));
+    }, [deletedFileIds, localFiles, movedFileFolderIds, uploads.data]);
 
     const visibleFiles = useMemo(() => {
         const query = searchQuery.trim().toLowerCase();
@@ -133,14 +137,13 @@ function Explorer() {
         setFavoriteIds((current) => (current.includes(fileId) ? current.filter((id) => id !== fileId) : [...current, fileId]));
     }
 
-    function createFolder() {
-        const folderName = window.prompt("Folder name");
+    function createFolder(folderName: string) {
+        const name = folderName.trim();
 
-        if (!folderName?.trim()) {
+        if (!name) {
             return;
         }
 
-        const name = folderName.trim();
         setLocalFolders((current) => [
             ...current,
             {
@@ -151,6 +154,41 @@ function Explorer() {
                 coverUrl: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=900&q=80"
             }
         ]);
+    }
+
+    function deleteFiles(fileIds: string[]) {
+        if (fileIds.length === 0) {
+            return;
+        }
+
+        setDeletedFileIds((current) => Array.from(new Set([...current, ...fileIds])));
+        setLocalFiles((current) => current.filter((file) => !fileIds.includes(file.id)));
+        setMovedFileFolderIds((current) => {
+            const next = { ...current };
+            fileIds.forEach((fileId) => {
+                delete next[fileId];
+            });
+            return next;
+        });
+
+        if (selectedFileId && fileIds.includes(selectedFileId)) {
+            setSelectedFileId(null);
+        }
+    }
+
+    function moveFiles(fileIds: string[], folderId: string | null) {
+        if (fileIds.length === 0) {
+            return;
+        }
+
+        setMovedFileFolderIds((current) => {
+            const next = { ...current };
+            fileIds.forEach((fileId) => {
+                next[fileId] = folderId;
+            });
+            return next;
+        });
+        setLocalFiles((current) => current.map((file) => (fileIds.includes(file.id) ? { ...file, folderId } : file)));
     }
 
     async function uploadExplorerMedia(input: UploadModalSubmitInput) {
@@ -205,6 +243,7 @@ function Explorer() {
             />
             <ContentArea
                 activeFolder={activeFolder}
+                allFolders={allFolders}
                 autoEnabled={autoEnabled}
                 favoriteIds={favoriteIds}
                 files={visibleFiles}
@@ -216,6 +255,8 @@ function Explorer() {
                 onFavoriteToggle={toggleFavorite}
                 onFolderBack={goUpOneFolder}
                 onFilterChange={setFilter}
+                onFilesDelete={deleteFiles}
+                onFilesMove={moveFiles}
                 onFolderCreate={createFolder}
                 onFolderOpen={selectFolder}
                 onLock={lockDashboard}
