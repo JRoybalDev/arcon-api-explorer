@@ -307,7 +307,7 @@ explorerRoute.post("/media/upload", requireAdminKey, async (c) => {
     .values({
       name: file.name,
       url: stored.url,
-      previewUrl: file.type.startsWith("image/") ? thumbnailContentUrl(stored.relativePath) : stored.url,
+      previewUrl: file.type.startsWith("image/") || file.type.startsWith("video/") ? thumbnailContentUrl(stored.relativePath) : stored.url,
       contentType: file.type || "application/octet-stream",
       source: "upload",
       storageProvider: "local",

@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import { FiCheck, FiFileText, FiImage, FiVideo } from "react-icons/fi";
-import type { ExplorerFile } from "./types";
+import { mediaThumbnailUrl, type ExplorerFile } from "./types";
 
 type FileCardProps = {
   file: ExplorerFile;
@@ -16,6 +17,8 @@ export function FileCard({ file, isSelected = false, isSelectionMode = false, vi
   const isVideo = file.contentType.startsWith("video/");
   const Icon = isImage ? FiImage : isVideo ? FiVideo : FiFileText;
   const isList = view === "list";
+  const thumbnailUrl = mediaThumbnailUrl(file);
+  const [thumbnailFailed, setThumbnailFailed] = useState(false);
   const cardClassName = [
     "explorer-file-card",
     isList ? "explorer-file-card--list" : "",
@@ -24,6 +27,10 @@ export function FileCard({ file, isSelected = false, isSelectionMode = false, vi
   ]
     .filter(Boolean)
     .join(" ");
+
+  useEffect(() => {
+    setThumbnailFailed(false);
+  }, [thumbnailUrl]);
 
   function handlePress() {
     if (isSelectionMode) {
@@ -46,9 +53,7 @@ export function FileCard({ file, isSelected = false, isSelectionMode = false, vi
       layout
     >
       <button className="explorer-file-card__preview" type="button" onClick={handlePress} aria-label={isSelectionMode ? `Select ${file.name}` : `Open ${file.name}`}>
-        {isImage ? <img alt="" loading="lazy" decoding="async" src={file.previewUrl} /> : null}
-        {isVideo ? <video muted playsInline preload="metadata" src={file.url} /> : null}
-        {!isImage && !isVideo ? <Icon aria-hidden /> : null}
+        {thumbnailUrl && !thumbnailFailed ? <img alt="" loading="lazy" decoding="async" src={thumbnailUrl} onError={() => setThumbnailFailed(true)} /> : <Icon aria-hidden />}
         {isSelectionMode ? (
           <span className="explorer-file-card__check" aria-hidden>
             {isSelected ? <FiCheck /> : null}

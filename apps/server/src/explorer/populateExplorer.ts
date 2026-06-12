@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { createHash } from "node:crypto";
 import { readdir, stat } from "node:fs/promises";
 import { extname, join, posix } from "node:path";
@@ -183,7 +183,7 @@ async function syncMedia(scannedMedia: ScannedMedia[], folders: Map<string, Fold
     const values = {
       name: item.name,
       url: contentUrl(item.relativePath),
-      previewUrl: item.storageResourceType === "image" ? thumbnailContentUrl(item.relativePath) : contentUrl(item.relativePath),
+      previewUrl: thumbnailContentUrl(item.relativePath),
       contentType: item.contentType,
       source: "indexed",
       storageProvider: "local",
@@ -221,7 +221,7 @@ export async function updateFolderCovers() {
     db
       .select()
       .from(explorerMedia)
-      .where(eq(explorerMedia.storageResourceType, "image"))
+      .where(sql`${explorerMedia.storageResourceType} in ('image', 'video')`)
   ]);
   const foldersById = new Map(folders.map((folder) => [folder.id, folder]));
   const coverByFolderId = new Map<string, string>();

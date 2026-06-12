@@ -5,6 +5,7 @@ import type { Context } from "hono";
 import { mkdir, stat } from "node:fs/promises";
 import { dirname, extname, resolve, sep } from "node:path";
 import { Readable } from "node:stream";
+import { spawn } from "node:child_process";
 import { createReadStream } from "node:fs";
 import sharp from "sharp";
 import { auth } from "./auth";
@@ -147,17 +148,51 @@ async function ensureThumbnail(sourcePath: string, relativePath: string, sourceM
   }
 
   await mkdir(dirname(absolutePath), { recursive: true });
-  await sharp(sourcePath)
-    .rotate()
-    .resize({ width: 720, height: 720, fit: "inside", withoutEnlargement: true })
-    .webp({ quality: 74 })
-    .toFile(absolutePath);
+  const contentType = contentTypeForPath(sourcePath);
+
+  if (isImageContentType(contentType)) {
+    await sharp(sourcePath)
+      .rotate()
+      .resize({ width: 720, height: 720, fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 74 })
+      .toFile(absolutePath);
+  } else if (contentType.startsWith("video/")) {
+    await createVideoThumbnail(sourcePath, absolutePath);
+  } else {
+    throw new Error("Unsupported thumbnail source");
+  }
 
   const thumbnailStat = await stat(absolutePath);
   return {
     absolutePath,
     size: thumbnailStat.size
   };
+}
+
+async function createVideoThumbnail(sourcePath: string, outputPath: string) {
+  await new Promise<void>((resolvePromise, rejectPromise) => {
+    const child = spawn("ffmpeg", ["-y", "-ss", "00:00:01", "-i", sourcePath, "-frames:v", "1", "-vf", "scale=min(720\\,iw):-2", "-quality", "74", outputPath], {
+      stdio: "ignore"
+    });
+    const timeout = setTimeout(() => {
+      child.kill("SIGKILL");
+      rejectPromise(new Error("Video thumbnail generation timed out"));
+    }, 30_000);
+
+    child.once("error", (error) => {
+      clearTimeout(timeout);
+      rejectPromise(error);
+    });
+    child.once("exit", (code) => {
+      clearTimeout(timeout);
+      if (code === 0) {
+        resolvePromise();
+        return;
+      }
+
+      rejectPromise(new Error(`ffmpeg exited with code ${code ?? "unknown"}`));
+    });
+  });
 }
 
 void seedBootstrapAdmin().catch((error) => {
@@ -246,7 +281,7 @@ app.get("/content-thumbnails/*", async (c) => {
     const fileStat = await stat(absolutePath).catch(() => null);
     const originalContentType = contentTypeForPath(absolutePath);
 
-    if (!fileStat?.isFile() || !isImageContentType(originalContentType)) {
+    if (!fileStat?.isFile() || (!isImageContentType(originalContentType) && !originalContentType.startsWith("video/"))) {
       return fail(c, "Thumbnail not found", 404, { code: "THUMBNAIL_NOT_FOUND" });
     }
 

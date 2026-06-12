@@ -1,5 +1,6 @@
 import { SiteBrandingSchema, SiteMetadataSchema, type ExplorerFolder, type ExplorerMedia, type Site, type Upload } from "@fullstack-template/schema";
 import type { ExplorerFolderRow, ExplorerMediaRow, SiteRow, UploadRow } from "../db/schema";
+import { thumbnailContentUrl } from "./explorer/contentPaths";
 
 export function toSite(row: SiteRow): Site {
   return {
@@ -45,6 +46,9 @@ export function toExplorerFolder(row: ExplorerFolderRow, counts: { folderCount?:
 }
 
 export function toExplorerMedia(row: ExplorerMediaRow): ExplorerMedia {
+  const localVideoThumbnailUrl =
+    row.storageProvider === "local" && row.storageResourceType === "video" && row.storageKey ? thumbnailContentUrl(row.storageKey) : "";
+
   return {
     id: row.id,
     name: row.name,
@@ -54,7 +58,7 @@ export function toExplorerMedia(row: ExplorerMediaRow): ExplorerMedia {
     favorite: row.favorite,
     folderId: row.folderId,
     height: row.height,
-    previewUrl: row.previewUrl || row.url,
+    previewUrl: localVideoThumbnailUrl || row.previewUrl || row.url,
     size: row.size,
     source: row.source,
     storageKey: row.storageKey,

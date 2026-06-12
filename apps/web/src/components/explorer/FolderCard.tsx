@@ -3,7 +3,7 @@ import { FiFile, FiFolder } from "react-icons/fi";
 import { useEffect, useState } from "react";
 import { apiClient } from "../../shared/apiClient";
 import { useAdminSession } from "../../shared/useAdminSession";
-import type { ExplorerFolder, ExplorerFilter, ExplorerSort } from "./types";
+import { folderThumbnailUrl, type ExplorerFolder, type ExplorerFilter, type ExplorerSort } from "./types";
 
 type FolderCardProps = {
   folder: ExplorerFolder;
@@ -16,7 +16,7 @@ export function FolderCard({ folder, onOpen }: FolderCardProps) {
   const itemCount = folder.itemCount ?? folder.count;
   const folderCount = folder.folderCount ?? 0;
   const adminSession = useAdminSession();
-  const [thumbUrl, setThumbUrl] = useState<string | null>(folder.coverUrl || null);
+  const [thumbUrl, setThumbUrl] = useState<string | null>(folderThumbnailUrl(folder.coverUrl) || null);
 
   useEffect(() => {
     if (thumbUrl) return;
@@ -31,7 +31,7 @@ export function FolderCard({ folder, onOpen }: FolderCardProps) {
 
         if (canceled) return;
         if (media) {
-          setThumbUrl(media.previewUrl || media.url || "");
+          setThumbUrl(folderThumbnailUrl(media.previewUrl || ""));
         }
       } catch {
         // ignore
@@ -55,7 +55,7 @@ export function FolderCard({ folder, onOpen }: FolderCardProps) {
       type="button"
       onClick={() => onOpen(folder.id)}
     >
-      {thumbUrl ? <img alt="" src={thumbUrl} /> : <span className="explorer-folder-card__placeholder" aria-hidden><FiFolder /></span>}
+      {thumbUrl ? <img alt="" src={thumbUrl} onError={() => setThumbUrl(null)} /> : <span className="explorer-folder-card__placeholder" aria-hidden><FiFolder /></span>}
       <span className="explorer-folder-card__count" aria-label={`${itemCount} items${folderCount > 0 ? `, ${folderCount} folders` : ""}`}>
         <span className="explorer-folder-card__count-text">{itemCount} items{folderCount > 0 ? ` | ${folderCount} folders` : ""}</span>
         <span className="explorer-folder-card__count-mobile" aria-hidden>

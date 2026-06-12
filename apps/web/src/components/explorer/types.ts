@@ -59,3 +59,28 @@ export function apiMediaToExplorerFile(media: ExplorerMedia): ExplorerFile {
     width: media.width ?? undefined
   };
 }
+
+export function isLikelyVideoUrl(url: string) {
+  const cleanUrl = url.split("?")[0]?.toLowerCase() ?? "";
+  return /\.(mp4|webm|mov|m4v|avi|mkv|flv|wmv|3gp|ts)$/.test(cleanUrl);
+}
+
+export function mediaThumbnailUrl(file: Pick<ExplorerFile, "contentType" | "previewUrl" | "url">) {
+  if (!file.previewUrl) {
+    return "";
+  }
+
+  if (!file.contentType.startsWith("video/")) {
+    return file.previewUrl;
+  }
+
+  if (file.previewUrl === file.url) {
+    return "";
+  }
+
+  return isLikelyVideoUrl(file.previewUrl) && !file.previewUrl.includes("/content-thumbnails/") ? "" : file.previewUrl;
+}
+
+export function folderThumbnailUrl(url: string) {
+  return isLikelyVideoUrl(url) && !url.includes("/content-thumbnails/") ? "" : url;
+}
