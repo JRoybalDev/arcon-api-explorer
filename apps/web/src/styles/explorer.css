@@ -1573,6 +1573,14 @@
   align-items: center;
 }
 
+.explorer-viewer__controls-row > button {
+  flex: 1 1 0;
+  min-width: 0;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .explorer-viewer__controls button,
 .explorer-viewer__links button,
 .explorer-viewer__links a {
