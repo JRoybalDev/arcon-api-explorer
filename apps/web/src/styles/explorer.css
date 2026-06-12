@@ -1565,6 +1565,14 @@
   margin-top: 20px;
 }
 
+.explorer-viewer__controls-row {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+}
+
 .explorer-viewer__controls button,
 .explorer-viewer__links button,
 .explorer-viewer__links a {
@@ -1600,6 +1608,12 @@
   background: rgba(185, 130, 85, 0.18);
   border-color: rgba(224, 176, 127, 0.36);
   color: var(--explorer-accent-strong);
+}
+
+.explorer-viewer__controls button:disabled {
+  opacity: 0.55;
+  cursor: default;
+  filter: grayscale(10%);
 }
 
 .explorer-viewer__control-main--side {
