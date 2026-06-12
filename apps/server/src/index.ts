@@ -11,7 +11,7 @@ import sharp from "sharp";
 import { auth } from "./auth";
 import { seedBootstrapAdmin } from "./bootstrapAdmin";
 import { env } from "./env";
-import { assertSafeContentPath, normalizeContentPath } from "./explorer/contentPaths";
+import { assertSafeContentPath, normalizeContentPath, thumbnailCacheDirectories, thumbnailCachePath } from "./explorer/contentPaths";
 import { startExplorerPopulationSchedule } from "./explorer/populateExplorer";
 import { fail, ok } from "./http/response";
 import { logger } from "./logger";
@@ -137,30 +137,56 @@ function streamFileResponse(c: Context, absolutePath: string, size: number, cont
 }
 
 async function ensureThumbnail(sourcePath: string, relativePath: string, sourceModifiedAt: Date) {
-  const cachePath = normalizeContentPath(`.arcon-thumbnails/${relativePath}.w720.webp`);
-  const { absolutePath } = assertSafeContentPath(cachePath);
-  const cachedStat = await stat(absolutePath).catch(() => null);
+  let staleThumbnail: { absolutePath: string; modifiedAt: number; size: number } | null = null;
 
-  if (cachedStat?.isFile() && cachedStat.mtimeMs >= sourceModifiedAt.getTime()) {
-    return {
-      absolutePath,
-      size: cachedStat.size
-    };
+  for (const cacheDirectory of thumbnailCacheDirectories) {
+    const { absolutePath } = assertSafeContentPath(thumbnailCachePath(relativePath, cacheDirectory));
+    const cachedStat = await stat(absolutePath).catch(() => null);
+
+    if (cachedStat?.isFile() && cachedStat.mtimeMs >= sourceModifiedAt.getTime()) {
+      return {
+        absolutePath,
+        size: cachedStat.size
+      };
+    }
+
+    if (cachedStat?.isFile() && (!staleThumbnail || cachedStat.mtimeMs > staleThumbnail.modifiedAt)) {
+      staleThumbnail = {
+        absolutePath,
+        modifiedAt: cachedStat.mtimeMs,
+        size: cachedStat.size
+      };
+    }
   }
+
+  const cachePath = thumbnailCachePath(relativePath);
+  const { absolutePath } = assertSafeContentPath(cachePath);
 
   await mkdir(dirname(absolutePath), { recursive: true });
   const contentType = contentTypeForPath(sourcePath);
 
-  if (isImageContentType(contentType)) {
-    await sharp(sourcePath)
-      .rotate()
-      .resize({ width: 720, height: 720, fit: "inside", withoutEnlargement: true })
-      .webp({ quality: 74 })
-      .toFile(absolutePath);
-  } else if (contentType.startsWith("video/")) {
-    await createVideoThumbnail(sourcePath, absolutePath);
-  } else {
-    throw new Error("Unsupported thumbnail source");
+  try {
+    if (isImageContentType(contentType)) {
+      await sharp(sourcePath)
+        .rotate()
+        .resize({ width: 720, height: 720, fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 74 })
+        .toFile(absolutePath);
+    } else if (contentType.startsWith("video/")) {
+      await createVideoThumbnail(sourcePath, absolutePath);
+    } else {
+      throw new Error("Unsupported thumbnail source");
+    }
+  } catch (error) {
+    if (staleThumbnail) {
+      logger.warn("content.thumbnail_stale_cache_used", { error, path: relativePath });
+      return {
+        absolutePath: staleThumbnail.absolutePath,
+        size: staleThumbnail.size
+      };
+    }
+
+    throw error;
   }
 
   const thumbnailStat = await stat(absolutePath);

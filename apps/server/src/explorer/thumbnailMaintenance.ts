@@ -7,7 +7,7 @@ import { explorerMedia } from "../../db/schema";
 import { db } from "../db";
 import { env } from "../env";
 import { logger } from "../logger";
-import { assertSafeContentPath, normalizeContentPath } from "./contentPaths";
+import { assertSafeContentPath, thumbnailCacheDirectories, thumbnailCachePath } from "./contentPaths";
 
 type ThumbnailRunStats = {
   failed: number;
@@ -65,13 +65,18 @@ async function createVideoThumbnail(sourcePath: string, outputPath: string) {
 }
 
 async function ensureContentThumbnail(sourcePath: string, relativePath: string, sourceModifiedAt: Date, options: { force: boolean }) {
-  const cachePath = normalizeContentPath(`.arcon-thumbnails/${relativePath}.w720.webp`);
-  const { absolutePath } = assertSafeContentPath(cachePath);
-  const cachedStat = await stat(absolutePath).catch(() => null);
+  if (!options.force) {
+    for (const cacheDirectory of thumbnailCacheDirectories) {
+      const { absolutePath } = assertSafeContentPath(thumbnailCachePath(relativePath, cacheDirectory));
+      const cachedStat = await stat(absolutePath).catch(() => null);
 
-  if (!options.force && cachedStat?.isFile() && cachedStat.mtimeMs >= sourceModifiedAt.getTime()) {
-    return false;
+      if (cachedStat?.isFile() && cachedStat.mtimeMs >= sourceModifiedAt.getTime()) {
+        return false;
+      }
+    }
   }
+
+  const { absolutePath } = assertSafeContentPath(thumbnailCachePath(relativePath));
 
   await mkdir(dirname(absolutePath), { recursive: true });
   const contentType = contentTypeForPath(sourcePath);
@@ -168,7 +173,11 @@ export function generateMissingContentThumbnails() {
 }
 
 export async function deleteAndRegenerateContentThumbnails() {
-  const { absolutePath } = assertSafeContentPath(".arcon-thumbnails");
-  await rm(absolutePath, { force: true, recursive: true });
+  await Promise.all(
+    thumbnailCacheDirectories.map((cacheDirectory) => {
+      const { absolutePath } = assertSafeContentPath(cacheDirectory);
+      return rm(absolutePath, { force: true, recursive: true });
+    })
+  );
   return generateContentThumbnails({ force: true });
 }
