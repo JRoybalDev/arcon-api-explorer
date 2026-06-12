@@ -41,9 +41,9 @@ export function assertSafeContentPath(pathname: string) {
 }
 
 export function contentUrl(relativePath: string) {
-  return `${env.cdnBaseUrl}/content/${normalizeContentPath(relativePath).split("/").map(encodeURIComponent).join("/")}`;
+  return `/content/${normalizeContentPath(relativePath).split("/").map(encodeURIComponent).join("/")}`;
 }
 
 export function thumbnailContentUrl(relativePath: string) {
-  return `${env.cdnBaseUrl}/content-thumbnails/${normalizeContentPath(relativePath).split("/").map(encodeURIComponent).join("/")}`;
+  return `/content-thumbnails/${normalizeContentPath(relativePath).split("/").map(encodeURIComponent).join("/")}`;
 }

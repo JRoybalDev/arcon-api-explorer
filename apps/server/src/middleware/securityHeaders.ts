@@ -26,6 +26,7 @@ function originsFromEnv() {
 }
 
 const extraOrigins = originsFromEnv();
+
 const extraOriginsStr = extraOrigins.length > 0 ? ` ${extraOrigins.join(" ")}` : "";
 
 const csp = [
@@ -35,11 +36,11 @@ const csp = [
   "frame-ancestors 'none'",
   `img-src 'self' data: blob: https:${extraOriginsStr}`,
   `media-src 'self' blob: https:${extraOriginsStr}`,
-  "font-src 'self' data: https:",
-  "style-src 'self' 'unsafe-inline' https://unpkg.com",
-  "script-src 'self' 'unsafe-inline' https://unpkg.com",
-  "connect-src 'self' https:"
-].join("; ");
+  `font-src 'self' data: https:`,
+  `style-src 'self' 'unsafe-inline' https://unpkg.com`,
+  `script-src 'self' 'unsafe-inline' https://unpkg.com`,
+  `connect-src 'self' https:`
+].join('; ');
 
 export const securityHeaders: MiddlewareHandler = async (c, next) => {
   if (!env.securityHeadersEnabled) {
