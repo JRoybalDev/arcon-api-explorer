@@ -226,6 +226,20 @@ export function FileViewerModal({
     }
   }
 
+  function handleAutoToggle() {
+    if (!autoEnabled && loopEnabled) {
+      onLoopToggle();
+    }
+    onAutoToggle();
+  }
+
+  function handleLoopToggle() {
+    if (!loopEnabled && autoEnabled) {
+      onAutoToggle();
+    }
+    onLoopToggle();
+  }
+
   function handleVideoEnded() {
     if (!autoEnabled) {
       return;
@@ -769,35 +783,73 @@ export function FileViewerModal({
         </div>
 
         <div className="explorer-viewer__controls">
-          <button className="explorer-viewer__control-main explorer-viewer__control-main--side" type="button" onClick={goPrevious} title="Previous file">
-            <FiSkipBack aria-hidden /> Prev
-          </button>
-          <button className="explorer-viewer__control-main explorer-viewer__control-main--center" aria-pressed={autoEnabled} type="button" onClick={onAutoToggle} title="Auto advance">
-            {autoEnabled ? <FiPauseCircle aria-hidden /> : <FiPlayCircle aria-hidden />} Auto {autoEnabled ? "ON" : "OFF"}
-          </button>
-          <button className="explorer-viewer__control-main explorer-viewer__control-main--side" type="button" onClick={goNext} title="Next file">
-            Next <FiSkipForward aria-hidden />
-          </button>
-          <button className="explorer-viewer__control-action" aria-label="Favorite" aria-pressed={isFavorite} type="button" onClick={() => onFavoriteToggle(file.id)} title="Favorite">
-            <FiHeart aria-hidden />
-          </button>
-          <button className="explorer-viewer__control-action" aria-label="Open random file" type="button" onClick={onRandom} title="Open random file">
-            <FaDice aria-hidden />
-          </button>
-          <button className="explorer-viewer__control-action" aria-label={shuffleEnabled ? "Turn shuffle off" : "Turn shuffle on"} aria-pressed={shuffleEnabled} type="button" onClick={onShuffle} title={shuffleEnabled ? "Shuffle ON" : "Shuffle OFF"}>
-            <FiShuffle aria-hidden />
-          </button>
-          <button className="explorer-viewer__control-action" aria-label="Fullscreen" type="button" onClick={() => void enterFullscreen(stageRef)} title="Fullscreen">
-            <FiMaximize2 aria-hidden />
-          </button>
-          {isVideo ? (
-            <button className="explorer-viewer__control-action explorer-viewer__control-action--half" aria-label={loopEnabled ? "Turn loop off" : "Turn loop on"} aria-pressed={loopEnabled} type="button" onClick={onLoopToggle} title="Loop video">
-              <FiRefreshCw aria-hidden />
+          <div className="explorer-viewer__controls-row">
+            <button className="explorer-viewer__control-main" type="button" onClick={goPrevious} title="Previous file">
+              <FiSkipBack aria-hidden /> <span>Prev</span>
             </button>
-          ) : null}
-          <button className="explorer-viewer__control-link" type="button" onClick={() => void copyUrl()} title="Copy URL">
-            <FiCopy aria-hidden /> Copy URL
-          </button>
+
+            <button
+              className="explorer-viewer__control-main"
+              aria-pressed={autoEnabled}
+              type="button"
+              onClick={handleAutoToggle}
+              title="Auto advance"
+              disabled={loopEnabled}
+            >
+              {autoEnabled ? <FiPauseCircle aria-hidden /> : <FiPlayCircle aria-hidden />} <span>Auto {autoEnabled ? "ON" : "OFF"}</span>
+            </button>
+
+            <button className="explorer-viewer__control-main" type="button" onClick={goNext} title="Next file">
+              <span>Next</span> <FiSkipForward aria-hidden />
+            </button>
+          </div>
+
+          <div className="explorer-viewer__controls-row">
+            <button className="explorer-viewer__control-action" aria-label="Favorite" aria-pressed={isFavorite} type="button" onClick={() => onFavoriteToggle(file.id)} title="Favorite">
+              <FiHeart aria-hidden /> <span>Favorite</span>
+            </button>
+
+            {isVideo ? (
+              <button
+                className="explorer-viewer__control-action"
+                aria-label={loopEnabled ? "Turn loop off" : "Turn loop on"}
+                aria-pressed={loopEnabled}
+                type="button"
+                onClick={handleLoopToggle}
+                title="Loop video"
+                disabled={autoEnabled}
+              >
+                <FiRefreshCw aria-hidden /> <span>Loop {loopEnabled ? "ON" : "OFF"}</span>
+              </button>
+            ) : (
+              <button className="explorer-viewer__control-action" aria-hidden disabled type="button" title="Loop not available">
+                <FiRefreshCw aria-hidden /> <span>Loop</span>
+              </button>
+            )}
+          </div>
+
+          <div className="explorer-viewer__controls-row">
+            <button className="explorer-viewer__control-action" aria-label="Open random file" type="button" onClick={onRandom} title="Open random file">
+              <FaDice aria-hidden /> <span>Random</span>
+            </button>
+
+            <button
+              className="explorer-viewer__control-action"
+              aria-label={shuffleEnabled ? "Turn shuffle off" : "Turn shuffle on"}
+              aria-pressed={shuffleEnabled}
+              type="button"
+              onClick={onShuffle}
+              title={shuffleEnabled ? "Shuffle ON" : "Shuffle OFF"}
+            >
+              <FiShuffle aria-hidden /> <span>Shuffle {shuffleEnabled ? "ON" : "OFF"}</span>
+            </button>
+          </div>
+
+          <div className="explorer-viewer__controls-row">
+            <button className="explorer-viewer__control-link" type="button" onClick={() => void copyUrl()} title="Copy URL">
+              <FiCopy aria-hidden /> <span>Copy URL</span>
+            </button>
+          </div>
         </div>
 
         <div className="explorer-viewer__links">
