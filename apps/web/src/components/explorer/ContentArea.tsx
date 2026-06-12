@@ -441,7 +441,7 @@ export function ContentArea({
             </div>
             <div className={`explorer-folder-grid explorer-folder-grid--${view}`}>
               {folders.map((folder) => (
-                <FolderCard folder={folder} key={folder.id} onOpen={onFolderOpen} />
+                <FolderCard folder={folder} key={folder.id} onOpen={onFolderOpen} filter={filter} sort={sort} />
               ))}
             </div>
           </section>
