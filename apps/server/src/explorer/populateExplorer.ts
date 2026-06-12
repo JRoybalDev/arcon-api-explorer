@@ -216,14 +216,35 @@ async function syncMedia(scannedMedia: ScannedMedia[], folders: Map<string, Fold
 }
 
 async function updateFolderCovers() {
-  const folders = await db.select().from(explorerFolders);
+  const [folders, mediaRows] = await Promise.all([
+    db.select().from(explorerFolders),
+    db
+      .select()
+      .from(explorerMedia)
+      .where(eq(explorerMedia.storageResourceType, "image"))
+  ]);
+  const foldersById = new Map(folders.map((folder) => [folder.id, folder]));
+  const coverByFolderId = new Map<string, string>();
+  const newestImages = [...mediaRows].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+  for (const media of newestImages) {
+    let currentFolderId = media.folderId;
+
+    while (currentFolderId) {
+      if (!coverByFolderId.has(currentFolderId)) {
+        coverByFolderId.set(currentFolderId, media.previewUrl || media.url);
+      }
+
+      currentFolderId = foldersById.get(currentFolderId)?.parentId ?? null;
+    }
+  }
 
   for (const folder of folders) {
-    const [cover] = await db.select().from(explorerMedia).where(eq(explorerMedia.folderId, folder.id)).limit(1);
+    const coverUrl = coverByFolderId.get(folder.id) ?? "";
     await db
       .update(explorerFolders)
       .set({
-        coverUrl: cover?.previewUrl || "",
+        coverUrl,
         updatedAt: new Date()
       })
       .where(eq(explorerFolders.id, folder.id));

@@ -125,29 +125,49 @@ async function folderCounts(folderIds: string[]) {
   }
 
   const counts = new Map(folderIds.map((folderId) => [folderId, { folderCount: 0, itemCount: 0 }]));
-  const [folderCountRows, itemCountRows] = await Promise.all([
-    db
-      .select({ parentId: explorerFolders.parentId, value: count() })
-      .from(explorerFolders)
-      .where(inArray(explorerFolders.parentId, folderIds))
-      .groupBy(explorerFolders.parentId),
-    db
-      .select({ folderId: explorerMedia.folderId, value: count() })
-      .from(explorerMedia)
-      .where(inArray(explorerMedia.folderId, folderIds))
-      .groupBy(explorerMedia.folderId)
+  const [folderRows, mediaRows] = await Promise.all([
+    db.select({ id: explorerFolders.id, parentId: explorerFolders.parentId }).from(explorerFolders),
+    db.select({ folderId: explorerMedia.folderId }).from(explorerMedia)
   ]);
-
-  for (const row of folderCountRows) {
-    if (row.parentId) {
-      counts.get(row.parentId)!.folderCount = Number(row.value);
+  const childrenByParent = folderRows.reduce<Record<string, string[]>>((groups, folder) => {
+    if (folder.parentId) {
+      groups[folder.parentId] = [...(groups[folder.parentId] ?? []), folder.id];
     }
+
+    return groups;
+  }, {});
+  const mediaCountByFolder = mediaRows.reduce<Record<string, number>>((groups, media) => {
+    if (media.folderId) {
+      groups[media.folderId] = (groups[media.folderId] ?? 0) + 1;
+    }
+
+    return groups;
+  }, {});
+
+  function collectDescendants(parentId: string) {
+    const descendantIds: string[] = [];
+    const pendingIds = [...(childrenByParent[parentId] ?? [])];
+
+    while (pendingIds.length > 0) {
+      const nextId = pendingIds.shift();
+      if (!nextId) {
+        continue;
+      }
+
+      descendantIds.push(nextId);
+      pendingIds.push(...(childrenByParent[nextId] ?? []));
+    }
+
+    return descendantIds;
   }
 
-  for (const row of itemCountRows) {
-    if (row.folderId) {
-      counts.get(row.folderId)!.itemCount = Number(row.value);
-    }
+  for (const folderId of folderIds) {
+    const descendantIds = collectDescendants(folderId);
+    const itemCount = [folderId, ...descendantIds].reduce((total, id) => total + (mediaCountByFolder[id] ?? 0), 0);
+    counts.set(folderId, {
+      folderCount: descendantIds.length,
+      itemCount
+    });
   }
 
   return counts;
