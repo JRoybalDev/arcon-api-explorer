@@ -13,7 +13,7 @@ import { dirname, extname } from "node:path";
 import { explorerFolders, explorerMedia } from "../../db/schema";
 import { db } from "../db";
 import { assertSafeContentPath, contentUrl, normalizeContentPath, thumbnailContentUrl } from "../explorer/contentPaths";
-import { populateExplorerFromContentRoot } from "../explorer/populateExplorer";
+import { populateExplorerFromContentRoot, updateFolderCovers } from "../explorer/populateExplorer";
 import { fail, ok } from "../http/response";
 import { toExplorerFolder, toExplorerMedia } from "../mappers";
 import { requireAdminKey } from "../middleware/admin";
@@ -322,6 +322,8 @@ explorerRoute.post("/media/upload", requireAdminKey, async (c) => {
     return fail(c, "Media was not saved", 500, { code: "EXPLORER_MEDIA_SAVE_FAILED" });
   }
 
+  await updateFolderCovers();
+
   return ok(c, toExplorerMedia(media), 201);
 });
 
@@ -356,6 +358,8 @@ explorerRoute.post("/media/remote", requireAdminKey, async (c) => {
     )
     .returning();
 
+  await updateFolderCovers();
+
   return ok(c, rows.map(toExplorerMedia), 201);
 });
 
@@ -381,6 +385,8 @@ explorerRoute.post("/media/move", requireAdminKey, async (c) => {
     .where(inArray(explorerMedia.id, parsed.data.mediaIds))
     .returning();
 
+  await updateFolderCovers();
+
   return ok(c, rows.map(toExplorerMedia));
 });
 
@@ -401,6 +407,8 @@ explorerRoute.delete("/media", requireAdminKey, async (c) => {
         return rm(absolutePath, { force: true });
       })
   );
+
+  await updateFolderCovers();
 
   return ok(c, rows.map(toExplorerMedia));
 });

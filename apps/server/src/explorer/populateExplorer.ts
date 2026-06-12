@@ -215,7 +215,7 @@ async function syncMedia(scannedMedia: ScannedMedia[], folders: Map<string, Fold
   }
 }
 
-async function updateFolderCovers() {
+export async function updateFolderCovers() {
   const [folders, mediaRows] = await Promise.all([
     db.select().from(explorerFolders),
     db
