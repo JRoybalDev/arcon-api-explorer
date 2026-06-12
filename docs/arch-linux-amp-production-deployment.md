@@ -138,6 +138,7 @@ ADMIN_KEY=<long-random-secret>
 CONTENT_ROOT=/mnt/ARCON-CLOUD
 UPLOAD_DIR=/mnt/ARCON-CLOUD/.arcon-uploads
 STORAGE_DRIVER=local
+FFMPEG_PATH=ffmpeg
 
 AUTO_POPULATE_EXPLORER=true
 POPULATE_EXPLORER_ON_STARTUP=true
@@ -260,7 +261,23 @@ SECURITY_HSTS_ENABLED=false
 
 Switch back to HTTPS after the certificate works.
 
-## 10. First Production Start
+## 10. Video Thumbnails
+
+Video thumbnails require `ffmpeg` on the AMP host. On Arch Linux, install it with:
+
+```bash
+sudo pacman -S --needed ffmpeg
+```
+
+If AMP does not inherit the system PATH, set `FFMPEG_PATH` in `.env` to the absolute binary path, for example:
+
+```env
+FFMPEG_PATH=/usr/bin/ffmpeg
+```
+
+Without ffmpeg, videos still open from the modal, but folder and file cards fall back to icons instead of generated video thumbnails.
+
+## 11. First Production Start
 
 Start the AMP app.
 

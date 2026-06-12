@@ -42,6 +42,7 @@ export const env = {
   storageDriver,
   uploadDir: process.env.UPLOAD_DIR ?? "uploads",
   contentRoot: process.env.CONTENT_ROOT ?? "/AMP/bun-app-runner/app/media",
+  ffmpegPath: process.env.FFMPEG_PATH ?? "ffmpeg",
   cdnBaseUrl: (process.env.CDN_BASE_URL ?? process.env.PUBLIC_API_URL ?? "https://arcon-api.duckdns.org:7777").replace(/\/+$/, ""),
   autoPopulateExplorer: process.env.AUTO_POPULATE_EXPLORER !== "false",
   populateExplorerIntervalMs: Number(process.env.POPULATE_EXPLORER_INTERVAL_MS ?? 60 * 60 * 1000),

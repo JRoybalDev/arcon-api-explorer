@@ -1,8 +1,8 @@
 import { type MouseEvent, type RefObject, type TouchEvent, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { FiArrowLeft, FiCopy, FiDownload, FiHeart, FiImage, FiLock, FiMaximize2, FiMoreVertical, FiPauseCircle, FiPlayCircle, FiPlus, FiRefreshCw, FiShuffle, FiSkipBack, FiSkipForward, FiTrash2, FiX, FiZap } from "react-icons/fi";
+import { FiArrowLeft, FiCopy, FiDownload, FiHeart, FiImage, FiLock, FiMaximize2, FiMoreVertical, FiPauseCircle, FiPlayCircle, FiPlus, FiRefreshCw, FiShuffle, FiSkipBack, FiSkipForward, FiTrash2, FiVideo, FiX, FiZap } from "react-icons/fi";
 import { FaDice, FaHeart } from "react-icons/fa";
-import type { ExplorerFile } from "./types";
+import { mediaThumbnailUrl, type ExplorerFile } from "./types";
 
 type FileViewerModalProps = {
   autoEnabled: boolean;
@@ -339,6 +339,10 @@ export function FileViewerModal({
   }
 
   function handleTouchStart(event: TouchEvent<HTMLElement>) {
+    if (event.target instanceof HTMLElement && event.target.closest("video")) {
+      return;
+    }
+
     event.stopPropagation();
     revealViewerChrome();
 
@@ -380,6 +384,10 @@ export function FileViewerModal({
   }
 
   function handleTouchMove(event: TouchEvent<HTMLElement>) {
+    if (event.target instanceof HTMLElement && event.target.closest("video")) {
+      return;
+    }
+
     if (interactionLocked) {
       event.stopPropagation();
       event.preventDefault();
@@ -445,6 +453,10 @@ export function FileViewerModal({
   }
 
   function handleTouchEnd(event: TouchEvent<HTMLElement>) {
+    if (event.target instanceof HTMLElement && event.target.closest("video")) {
+      return;
+    }
+
     if (pinchStartDistance.current) {
       pinchStartDistance.current = null;
       pinchStartScale.current = zoomScale;
@@ -605,6 +617,18 @@ export function FileViewerModal({
   function renderMedia(targetFile: ExplorerFile, hiddenVideoControls = false) {
     const targetIsImage = targetFile.contentType.startsWith("image/");
     const targetIsVideo = targetFile.contentType.startsWith("video/");
+    const thumbnailUrl = mediaThumbnailUrl(targetFile);
+
+    if (hiddenVideoControls) {
+      return (
+        <>
+          {targetIsImage ? <img alt="" src={targetFile.url} /> : null}
+          {targetIsVideo && thumbnailUrl ? <img alt="" src={thumbnailUrl} /> : null}
+          {targetIsVideo && !thumbnailUrl ? <FiVideo aria-hidden /> : null}
+          {!targetIsImage && !targetIsVideo ? <a href={targetFile.url}>Open file</a> : null}
+        </>
+      );
+    }
 
     return (
       <>

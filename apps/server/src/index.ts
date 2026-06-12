@@ -30,6 +30,7 @@ const adminRateLimit = createRateLimit({ name: "admin", windowSeconds: env.admin
 const uploadRateLimit = createRateLimit({ name: "uploads", windowSeconds: env.uploadRateLimitWindow, max: env.uploadRateLimitMax });
 const webDistRoot = "../web/dist";
 const serveWebIndex = serveStatic({ root: webDistRoot, path: "index.html" });
+let videoThumbnailingAvailable = true;
 
 function contentTypeForPath(path: string) {
   const extension = extname(path).toLowerCase();
@@ -170,8 +171,12 @@ async function ensureThumbnail(sourcePath: string, relativePath: string, sourceM
 }
 
 async function createVideoThumbnail(sourcePath: string, outputPath: string) {
+  if (!videoThumbnailingAvailable) {
+    throw new Error("Video thumbnailing is unavailable");
+  }
+
   await new Promise<void>((resolvePromise, rejectPromise) => {
-    const child = spawn("ffmpeg", ["-y", "-ss", "00:00:01", "-i", sourcePath, "-frames:v", "1", "-vf", "scale=min(720\\,iw):-2", "-quality", "74", outputPath], {
+    const child = spawn(env.ffmpegPath, ["-y", "-ss", "00:00:01", "-i", sourcePath, "-frames:v", "1", "-vf", "scale=min(720\\,iw):-2", "-quality", "74", outputPath], {
       stdio: "ignore"
     });
     const timeout = setTimeout(() => {
@@ -292,7 +297,19 @@ app.get("/content-thumbnails/*", async (c) => {
     c.header("Content-Type", "image/webp");
     return new Response(Readable.toWeb(createReadStream(thumbnail.absolutePath)) as unknown as ReadableStream);
   } catch (error) {
-    logger.warn("content.thumbnail_failed", { error });
+    const errorCode = typeof error === "object" && error && "code" in error ? error.code : "";
+    const isMissingFfmpeg = errorCode === "ENOENT";
+
+    if (isMissingFfmpeg) {
+      videoThumbnailingAvailable = false;
+      logger.warn("content.video_thumbnailing_unavailable", {
+        ffmpegPath: env.ffmpegPath,
+        error: "FFmpeg was not found. Install ffmpeg or set FFMPEG_PATH to enable video thumbnails."
+      });
+    } else if (videoThumbnailingAvailable) {
+      logger.warn("content.thumbnail_failed", { error });
+    }
+
     return fail(c, "Thumbnail not found", 404, { code: "THUMBNAIL_NOT_FOUND" });
   }
 });
