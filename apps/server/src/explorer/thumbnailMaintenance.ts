@@ -169,6 +169,11 @@ async function generateContentThumbnails(options: { force: boolean }): Promise<T
         const errorCode = typeof error === "object" && error && "code" in error ? error.code : "";
         if (errorCode === "ENOENT") {
           videoThumbnailingAvailable = false;
+            logger.warn("explorer.thumbnail_maintenance.ffmpeg_mark_unavailable", {
+              ffmpegPath: env.ffmpegPath,
+              storageKey: media.storageKey,
+              error: String(error)
+            });
         }
 
         stats.failed += 1;
