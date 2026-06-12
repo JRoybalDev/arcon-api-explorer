@@ -414,8 +414,8 @@ explorerRoute.delete("/media", requireAdminKey, async (c) => {
 });
 
 explorerRoute.post("/populate", requireAdminKey, async (c) => {
-  await populateExplorerFromContentRoot();
-  return ok(c, { completed: true });
+  void populateExplorerFromContentRoot();
+  return ok(c, { started: true });
 });
 
 explorerRoute.post("/media/:id/favorite", requireAdminKey, async (c) => {
