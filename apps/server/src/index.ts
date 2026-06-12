@@ -336,6 +336,7 @@ app.get("/favicon.svg", serveStatic({ root: webDistRoot }));
 app.get("/manifest.webmanifest", serveStatic({ root: webDistRoot }));
 app.get("/sw.js", serveStatic({ root: webDistRoot }));
 app.get("/", serveWebIndex);
+app.get("/settings", serveWebIndex);
 app.get("/dashboard", serveWebIndex);
 app.get("/reset-password", serveWebIndex);
 

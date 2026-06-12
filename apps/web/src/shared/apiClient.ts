@@ -419,6 +419,42 @@ export const apiClient = {
           })
         )
       );
+    },
+
+    async populate(adminKey: string) {
+      return apiJson(
+        "/api/explorer/populate",
+        withAdminKey(adminKey, {
+          method: "POST"
+        })
+      );
+    },
+
+    async unpopulate(adminKey: string) {
+      return apiJson(
+        "/api/explorer/unpopulate",
+        withAdminKey(adminKey, {
+          method: "POST"
+        })
+      );
+    },
+
+    async generateMissingThumbnails(adminKey: string) {
+      return apiJson(
+        "/api/explorer/thumbnails/missing",
+        withAdminKey(adminKey, {
+          method: "POST"
+        })
+      );
+    },
+
+    async regenerateThumbnails(adminKey: string) {
+      return apiJson(
+        "/api/explorer/thumbnails/regenerate",
+        withAdminKey(adminKey, {
+          method: "POST"
+        })
+      );
     }
   }
 };

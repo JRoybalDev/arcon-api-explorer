@@ -11,11 +11,14 @@ export const requestContext: MiddlewareHandler<{ Variables: AppVariables }> = as
 
   await next();
 
-  logger.info("http.request", {
+  const status = c.res.status;
+  const log = status >= 500 ? logger.error : status >= 400 ? logger.warn : logger.info;
+
+  log("http.request", {
     requestId,
     method: c.req.method,
     path: new URL(c.req.url).pathname,
-    status: c.res.status,
+    status,
     durationMs: Date.now() - startedAt
   });
 };

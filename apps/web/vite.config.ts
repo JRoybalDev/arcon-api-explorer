@@ -17,6 +17,8 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       proxy: {
         "/api": apiTarget,
+        "/content": apiTarget,
+        "/content-thumbnails": apiTarget,
         "/uploads": apiTarget
       }
     }

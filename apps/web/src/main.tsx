@@ -11,6 +11,7 @@ import "./styles/dashboard-branding.css";
 import "./styles/dashboard.css";
 import "./styles/explorer.css";
 import Explorer from "./routes/Explorer";
+import { ExplorerSettings } from "./routes/ExplorerSettings";
 
 const queryClient = new QueryClient();
 const Dashboard = lazy(() => import("./routes/Dashboard").then((module) => ({ default: module.Dashboard })));
@@ -27,6 +28,7 @@ const router = createBrowserRouter([
     element: <App />,
     children: [
       { index: true, element: <Explorer /> },
+      { path: "settings", element: <ExplorerSettings /> },
       { path: "dashboard", element: <LazyRoute><Dashboard /></LazyRoute> },
       { path: "reset-password", element: <LazyRoute><ResetPassword /></LazyRoute> },
       { path: "*", element: <LazyRoute><NotFound /></LazyRoute> }

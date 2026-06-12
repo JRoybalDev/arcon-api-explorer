@@ -9,11 +9,13 @@ import { useAdminSession } from "../shared/useAdminSession";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { setDocumentTitle } from "../shared/siteConfig";
 
 function Explorer() {
     const adminSession = useAdminSession();
     const queryClient = useQueryClient();
+    const navigate = useNavigate();
     const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
     const [autoEnabled, setAutoEnabled] = useState(false);
     const [filter, setFilter] = useState<ExplorerFilter>("all");
@@ -131,7 +133,7 @@ function Explorer() {
 
     useEffect(() => {
         setMediaLimit(mediaPageSize);
-    }, [activeFolderId, filter, mediaPageSize, searchQuery, sort]);
+    }, [activeFolderId, filter, searchQuery, sort]);
 
     const updateMediaPageSize = useCallback((nextPageSize: number) => {
         setMediaPageSize((current) => (current === nextPageSize ? current : nextPageSize));
@@ -401,11 +403,6 @@ function Explorer() {
         return <LoadingScreen label="Checking admin key..." />;
     }
 
-    function lockDashboard() {
-        adminSession.lock();
-        void queryClient.invalidateQueries({ queryKey: ["admin-session"] });
-    }
-
     return (
         <section className="explorer-shell page-full">
             <Directory
@@ -436,7 +433,6 @@ function Explorer() {
                 onFilesMove={moveFiles}
                 onFolderCreate={createFolder}
                 onFolderOpen={selectFolder}
-                onLock={lockDashboard}
                 onLoopToggle={() => setLoopEnabled((current) => !current)}
                 onLoadMoreFiles={loadMoreMedia}
                 onMediaPageSizeChange={updateMediaPageSize}
@@ -449,6 +445,7 @@ function Explorer() {
                 onRandomFile={() => void openRandomFile()}
                 onSelectedFileChange={openLoadedFile}
                 onSearchChange={setSearchQuery}
+                onSettingsOpen={() => navigate("/settings")}
                 onShuffleFiles={shuffleVisibleFiles}
                 onSortChange={setSort}
                 onUploadOpen={() => {

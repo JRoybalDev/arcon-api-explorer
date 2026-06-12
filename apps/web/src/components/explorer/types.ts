@@ -62,6 +62,10 @@ export function apiMediaToExplorerFile(media: ExplorerMedia): ExplorerFile {
 
 export function isLikelyVideoUrl(url: string) {
   const cleanUrl = url.split("?")[0]?.toLowerCase() ?? "";
+  if (cleanUrl.includes("/content-thumbnails/")) {
+    return false;
+  }
+
   return /\.(mp4|webm|mov|m4v|avi|mkv|flv|wmv|3gp|ts)$/.test(cleanUrl);
 }
 
@@ -78,9 +82,9 @@ export function mediaThumbnailUrl(file: Pick<ExplorerFile, "contentType" | "prev
     return "";
   }
 
-  return isLikelyVideoUrl(file.previewUrl) && !file.previewUrl.includes("/content-thumbnails/") ? "" : file.previewUrl;
+  return isLikelyVideoUrl(file.previewUrl) ? "" : file.previewUrl;
 }
 
 export function folderThumbnailUrl(url: string) {
-  return isLikelyVideoUrl(url) && !url.includes("/content-thumbnails/") ? "" : url;
+  return isLikelyVideoUrl(url) ? "" : url;
 }

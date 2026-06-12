@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { createHash } from "node:crypto";
 import { readdir, stat } from "node:fs/promises";
 import { extname, join, posix } from "node:path";
@@ -286,6 +286,28 @@ export async function populateExplorerFromContentRoot() {
   });
 
   return populatePromise;
+}
+
+export async function unpopulateExplorerFromContentRoot() {
+  logger.info("explorer.unpopulate.started");
+
+  const deletedMedia = await db.delete(explorerMedia).where(eq(explorerMedia.source, "indexed")).returning({ id: explorerMedia.id });
+  const deletedFolders = await db
+    .delete(explorerFolders)
+    .where(and(ne(explorerFolders.storageKey, ""), sql`${explorerFolders.storageKey} not like ${"fake-seed/%"}`))
+    .returning({ id: explorerFolders.id });
+
+  await updateFolderCovers();
+
+  logger.info("explorer.unpopulate.completed", {
+    folders: deletedFolders.length,
+    media: deletedMedia.length
+  });
+
+  return {
+    folders: deletedFolders.length,
+    media: deletedMedia.length
+  };
 }
 
 export function startExplorerPopulationSchedule() {

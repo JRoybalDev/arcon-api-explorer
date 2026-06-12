@@ -13,8 +13,10 @@ import { dirname, extname } from "node:path";
 import { explorerFolders, explorerMedia } from "../../db/schema";
 import { db } from "../db";
 import { assertSafeContentPath, contentUrl, normalizeContentPath, thumbnailContentUrl } from "../explorer/contentPaths";
-import { populateExplorerFromContentRoot, updateFolderCovers } from "../explorer/populateExplorer";
+import { populateExplorerFromContentRoot, unpopulateExplorerFromContentRoot, updateFolderCovers } from "../explorer/populateExplorer";
+import { deleteAndRegenerateContentThumbnails, generateMissingContentThumbnails } from "../explorer/thumbnailMaintenance";
 import { fail, ok } from "../http/response";
+import { logger } from "../logger";
 import { toExplorerFolder, toExplorerMedia } from "../mappers";
 import { requireAdminKey } from "../middleware/admin";
 import type { AppVariables } from "../types";
@@ -198,6 +200,46 @@ async function descendantFolderIds(folderId: string) {
   return descendantIds;
 }
 
+async function latestFolderCoverUrls(folderIds: string[]) {
+  if (folderIds.length === 0) {
+    return new Map<string, string>();
+  }
+
+  const requestedFolderIds = new Set(folderIds);
+  const [folderRows, mediaRows] = await Promise.all([
+    db.select({ id: explorerFolders.id, parentId: explorerFolders.parentId }).from(explorerFolders),
+    db
+      .select({
+        folderId: explorerMedia.folderId,
+        previewUrl: explorerMedia.previewUrl,
+        url: explorerMedia.url
+      })
+      .from(explorerMedia)
+      .where(sql`${explorerMedia.storageResourceType} in ('image', 'video')`)
+      .orderBy(desc(explorerMedia.createdAt))
+  ]);
+  const foldersById = new Map(folderRows.map((folder) => [folder.id, folder]));
+  const coverUrls = new Map<string, string>();
+
+  for (const media of mediaRows) {
+    let currentFolderId = media.folderId;
+
+    while (currentFolderId) {
+      if (requestedFolderIds.has(currentFolderId) && !coverUrls.has(currentFolderId)) {
+        coverUrls.set(currentFolderId, media.previewUrl || media.url);
+      }
+
+      currentFolderId = foldersById.get(currentFolderId)?.parentId ?? null;
+    }
+
+    if (coverUrls.size === requestedFolderIds.size) {
+      break;
+    }
+  }
+
+  return coverUrls;
+}
+
 explorerRoute.get("/contents", requireAdminKey, async (c) => {
   const folderId = optionalFolderId(c.req.query("folderId"));
   const filter = c.req.query("filter") ?? "all";
@@ -242,10 +284,11 @@ explorerRoute.get("/contents", requireAdminKey, async (c) => {
     db.select().from(explorerMedia).where(mediaCondition).orderBy(mediaOrder).limit(limit).offset(offset),
     db.select({ value: count() }).from(explorerMedia).where(mediaCondition)
   ]);
-  const counts = await folderCounts(folderRows.map((folder) => folder.id));
+  const folderIds = folderRows.map((folder) => folder.id);
+  const [counts, coverUrls] = await Promise.all([folderCounts(folderIds), latestFolderCoverUrls(folderIds)]);
 
   return ok(c, {
-    folders: folderRows.map((folder) => toExplorerFolder(folder, counts.get(folder.id))),
+    folders: folderRows.map((folder) => toExplorerFolder({ ...folder, coverUrl: coverUrls.get(folder.id) ?? folder.coverUrl }, counts.get(folder.id))),
     media: mediaRows.map(toExplorerMedia),
     mediaLimit: limit,
     mediaOffset: offset,
@@ -255,8 +298,9 @@ explorerRoute.get("/contents", requireAdminKey, async (c) => {
 
 explorerRoute.get("/folders", requireAdminKey, async (c) => {
   const rows = await db.select().from(explorerFolders).orderBy(asc(explorerFolders.name));
-  const counts = await folderCounts(rows.map((folder) => folder.id));
-  return ok(c, rows.map((folder) => toExplorerFolder(folder, counts.get(folder.id))));
+  const folderIds = rows.map((folder) => folder.id);
+  const [counts, coverUrls] = await Promise.all([folderCounts(folderIds), latestFolderCoverUrls(folderIds)]);
+  return ok(c, rows.map((folder) => toExplorerFolder({ ...folder, coverUrl: coverUrls.get(folder.id) ?? folder.coverUrl }, counts.get(folder.id))));
 });
 
 explorerRoute.post("/folders", requireAdminKey, async (c) => {
@@ -414,7 +458,22 @@ explorerRoute.delete("/media", requireAdminKey, async (c) => {
 });
 
 explorerRoute.post("/populate", requireAdminKey, async (c) => {
-  void populateExplorerFromContentRoot();
+  void populateExplorerFromContentRoot().catch((error) => logger.error("explorer.populate.manual_failed", { error }));
+  return ok(c, { started: true });
+});
+
+explorerRoute.post("/unpopulate", requireAdminKey, async (c) => {
+  const result = await unpopulateExplorerFromContentRoot();
+  return ok(c, result);
+});
+
+explorerRoute.post("/thumbnails/missing", requireAdminKey, async (c) => {
+  void generateMissingContentThumbnails().catch((error) => logger.error("explorer.thumbnails.missing_failed", { error }));
+  return ok(c, { started: true });
+});
+
+explorerRoute.post("/thumbnails/regenerate", requireAdminKey, async (c) => {
+  void deleteAndRegenerateContentThumbnails().catch((error) => logger.error("explorer.thumbnails.regenerate_failed", { error }));
   return ok(c, { started: true });
 });
 

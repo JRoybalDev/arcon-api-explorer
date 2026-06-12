@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type TouchEvent } from "react";
-import { FiArrowLeft, FiCheck, FiCheckCircle, FiChevronRight, FiFolder, FiFolderPlus, FiHelpCircle, FiHome, FiLogOut, FiMoreVertical, FiMove, FiTrash2, FiUpload, FiX } from "react-icons/fi";
+import { FiArrowLeft, FiCheck, FiCheckCircle, FiChevronRight, FiFolder, FiFolderPlus, FiHelpCircle, FiHome, FiMoreVertical, FiMove, FiSettings, FiTrash2, FiUpload, FiX } from "react-icons/fi";
 import { FileCard } from "./FileCard";
 import { FileViewerModal } from "./FileViewerModal";
 import { FiltersSearch } from "./FiltersSearch";
@@ -34,7 +34,6 @@ type ContentAreaProps = {
   onFilesMove: (fileIds: string[], folderId: string | null) => void;
   onFolderCreate: (folderName: string) => void;
   onFolderOpen: (folderId: string | null) => void;
-  onLock: () => void;
   onLoopToggle: () => void;
   onLoadMoreFiles?: () => void;
   onMediaPageSizeChange?: (pageSize: number) => void;
@@ -42,6 +41,7 @@ type ContentAreaProps = {
   onRandomFile: () => void;
   onSelectedFileChange: (fileId: string) => void;
   onSearchChange: (query: string) => void;
+  onSettingsOpen: () => void;
   onShuffleFiles: () => void;
   onSortChange: (sort: ExplorerSort) => void;
   onUploadOpen: () => void;
@@ -77,7 +77,6 @@ export function ContentArea({
   onFilesMove,
   onFolderCreate,
   onFolderOpen,
-  onLock,
   onLoopToggle,
   onLoadMoreFiles,
   onMediaPageSizeChange,
@@ -85,6 +84,7 @@ export function ContentArea({
   onRandomFile,
   onSelectedFileChange,
   onSearchChange,
+  onSettingsOpen,
   onShuffleFiles,
   onSortChange,
   onUploadOpen,
@@ -261,8 +261,8 @@ export function ContentArea({
     }
   }
 
-  function signOut() {
-    onLock();
+  function openSettings() {
+    onSettingsOpen();
     setMenuOpen(false);
   }
 
@@ -340,8 +340,8 @@ export function ContentArea({
               </button>
             </>
           )}
-          <button className="explorer-icon-button explorer-logout-button" type="button" onClick={signOut} title="Sign out" aria-label="Sign out">
-            <FiLogOut aria-hidden />
+          <button className="explorer-icon-button explorer-settings-button" type="button" onClick={openSettings} title="Settings" aria-label="Settings">
+            <FiSettings aria-hidden />
           </button>
           <div className="explorer-menu" ref={menuRef}>
             <button
@@ -393,9 +393,9 @@ export function ContentArea({
 
                 <div className="explorer-menu__group">
                   <span>Settings</span>
-                  <button type="button" role="menuitem" onClick={signOut}>
-                    Sign out
-                    <FiLogOut aria-hidden />
+                  <button type="button" role="menuitem" onClick={openSettings}>
+                    Settings
+                    <FiSettings aria-hidden />
                   </button>
                 </div>
               </div>

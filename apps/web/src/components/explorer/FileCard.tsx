@@ -50,7 +50,6 @@ export function FileCard({ file, isSelected = false, isSelectionMode = false, vi
       viewport={{ once: true, margin: "32px" }}
       whileHover={isList ? { x: 3 } : { y: -3, scale: 1.01 }}
       transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-      layout
     >
       <button className="explorer-file-card__preview" type="button" onClick={handlePress} aria-label={isSelectionMode ? `Select ${file.name}` : `Open ${file.name}`}>
         {thumbnailUrl && !thumbnailFailed ? <img alt="" loading="lazy" decoding="async" src={thumbnailUrl} onError={() => setThumbnailFailed(true)} /> : <Icon aria-hidden />}
