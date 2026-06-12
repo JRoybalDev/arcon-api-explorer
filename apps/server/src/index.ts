@@ -25,6 +25,10 @@ import { uploadsRoute } from "./routes/uploads";
 import { createRateLimit } from "./middleware/rateLimit";
 import type { AppVariables } from "./types";
 
+import { debugFfmpegAccess } from "./explorer/debug-ffmpeg";
+// near the top, before anything else runs:
+await debugFfmpegAccess();
+
 const app = new Hono<{ Variables: AppVariables }>();
 const adminRateLimit = createRateLimit({ name: "admin", windowSeconds: env.adminRateLimitWindow, max: env.adminRateLimitMax });
 const uploadRateLimit = createRateLimit({ name: "uploads", windowSeconds: env.uploadRateLimitWindow, max: env.uploadRateLimitMax });
