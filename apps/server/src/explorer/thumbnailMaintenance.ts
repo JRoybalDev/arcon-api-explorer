@@ -17,7 +17,6 @@ type ThumbnailRunStats = {
 };
 
 let thumbnailMaintenancePromise: Promise<ThumbnailRunStats> | null = null;
-let videoThumbnailingAvailable = true;
 
 function contentTypeForPath(path: string) {
   const extension = path.toLowerCase().split(".").pop();
@@ -36,19 +35,20 @@ function isThumbnailable(contentType: string) {
 }
 
 async function createVideoThumbnail(sourcePath: string, outputPath: string) {
-  // If ffmpeg was previously marked unavailable, re-check availability in case env changed.
-  if (!videoThumbnailingAvailable) {
-    try {
-      await access(env.ffmpegPath, fsConstants.X_OK);
-      videoThumbnailingAvailable = true;
-    } catch {
-      throw new Error("Video thumbnailing is unavailable");
-    }
+  // Always check ffmpeg accessibility fresh — never rely on a cached flag
+  // so that a bad first run doesn't permanently block all subsequent videos.
+  try {
+    await access(env.ffmpegPath, fsConstants.X_OK);
+  } catch (accessErr) {
+    logger.warn("explorer.thumbnail.ffmpeg_not_executable", {
+      ffmpegPath: env.ffmpegPath,
+      error: String(accessErr),
+    });
+    throw new Error(`ffmpeg is not accessible at ${env.ffmpegPath}: ${String(accessErr)}`);
   }
 
   await new Promise<void>((resolvePromise, rejectPromise) => {
-    // Capture stderr so we can log ffmpeg diagnostics when it fails.
-    const args = ["-y", "-ss", "00:00:01", "-i", sourcePath, "-frames:v", "1", "-vf", "scale=min(720,iw):-2", outputPath];
+    const args = ["-y", "-ss", "00:00:01", "-i", sourcePath, "-frames:v", "1", "-vf", "scale=min(720\\,iw):-2", outputPath];
     logger.info("explorer.thumbnail.ffmpeg_start", { ffmpegPath: env.ffmpegPath, args, sourcePath, outputPath });
 
     const child = spawn(env.ffmpegPath, args, { stdio: ["ignore", "ignore", "pipe"] });
@@ -68,7 +68,12 @@ async function createVideoThumbnail(sourcePath: string, outputPath: string) {
 
     child.once("error", (error) => {
       clearTimeout(timeout);
-      logger.warn("explorer.thumbnail.ffmpeg_error", { error: String(error), sourcePath, outputPath });
+      logger.warn("explorer.thumbnail.ffmpeg_spawn_error", {
+        error: String(error),
+        ffmpegPath: env.ffmpegPath,
+        sourcePath,
+        outputPath,
+      });
       rejectPromise(error);
     });
 
@@ -77,12 +82,23 @@ async function createVideoThumbnail(sourcePath: string, outputPath: string) {
       const durationMs = Date.now() - started;
       if (code === 0) {
         const outStat = await stat(outputPath).catch(() => null);
-        logger.info("explorer.thumbnail.ffmpeg_success", { sourcePath, outputPath, durationMs, size: outStat?.size ?? null });
+        logger.info("explorer.thumbnail.ffmpeg_success", {
+          sourcePath,
+          outputPath,
+          durationMs,
+          size: outStat?.size ?? null,
+        });
         resolvePromise();
         return;
       }
 
-      logger.warn("explorer.thumbnail.ffmpeg_failed", { code, stderr: stderr.trim(), durationMs, sourcePath, outputPath });
+      logger.warn("explorer.thumbnail.ffmpeg_failed", {
+        code,
+        stderr: stderr.trim(),
+        durationMs,
+        sourcePath,
+        outputPath,
+      });
       rejectPromise(new Error(`ffmpeg exited with code ${code ?? "unknown"}: ${stderr.trim()}`));
     });
   });
@@ -130,7 +146,7 @@ async function generateContentThumbnails(options: { force: boolean }): Promise<T
     const stats: ThumbnailRunStats = {
       failed: 0,
       generated: 0,
-      skipped: 0
+      skipped: 0,
     };
 
     logger.info("explorer.thumbnails.started", { force: options.force });
@@ -138,7 +154,7 @@ async function generateContentThumbnails(options: { force: boolean }): Promise<T
     const mediaRows = await db
       .select({
         storageKey: explorerMedia.storageKey,
-        storageResourceType: explorerMedia.storageResourceType
+        storageResourceType: explorerMedia.storageResourceType,
       })
       .from(explorerMedia)
       .where(and(eq(explorerMedia.storageProvider, "local"), inArray(explorerMedia.storageResourceType, ["image", "video"])));
@@ -166,28 +182,17 @@ async function generateContentThumbnails(options: { force: boolean }): Promise<T
           stats.skipped += 1;
         }
       } catch (error) {
-        const errorCode = typeof error === "object" && error && "code" in error ? error.code : "";
-        const msg = String(error);
-        if (errorCode === "ENOENT" && msg.includes(env.ffmpegPath)) {
-          videoThumbnailingAvailable = false;
-            logger.warn("explorer.thumbnail_maintenance.ffmpeg_mark_unavailable", {
-              ffmpegPath: env.ffmpegPath,
-              storageKey: media.storageKey,
-              error: String(error)
-            });
-        }
-
         stats.failed += 1;
         logger.warn("explorer.thumbnail_maintenance.item_failed", {
           error,
-          storageKey: media.storageKey
+          storageKey: media.storageKey,
         });
       }
     }
 
     logger.info("explorer.thumbnails.completed", {
       ...stats,
-      durationMs: Date.now() - startedAt
+      durationMs: Date.now() - startedAt,
     });
 
     return stats;
