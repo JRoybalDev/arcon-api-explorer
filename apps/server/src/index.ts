@@ -1,8 +1,9 @@
 import { serveStatic } from "hono/bun";
 import { cors } from "hono/cors";
 import { Hono } from "hono";
+import type { Context } from "hono";
 import { mkdir, stat } from "node:fs/promises";
-import { dirname, extname } from "node:path";
+import { dirname, extname, resolve, sep } from "node:path";
 import { Readable } from "node:stream";
 import { createReadStream } from "node:fs";
 import sharp from "sharp";
@@ -43,6 +44,94 @@ function contentTypeForPath(path: string) {
 
 function isImageContentType(contentType: string) {
   return contentType.startsWith("image/");
+}
+
+function parseRangeHeader(rangeHeader: string | null, size: number) {
+  if (!rangeHeader) {
+    return null;
+  }
+
+  const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader.trim());
+  if (!match) {
+    return "invalid" as const;
+  }
+
+  const [, startValue = "", endValue = ""] = match;
+  if (!startValue && !endValue) {
+    return "invalid" as const;
+  }
+
+  if (!startValue) {
+    const suffixLength = Number(endValue);
+    if (!Number.isSafeInteger(suffixLength) || suffixLength <= 0) {
+      return "invalid" as const;
+    }
+
+    return {
+      start: Math.max(size - suffixLength, 0),
+      end: size - 1
+    };
+  }
+
+  const start = Number(startValue);
+  const requestedEnd = endValue ? Number(endValue) : size - 1;
+
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(requestedEnd) || start < 0 || requestedEnd < start || start >= size) {
+    return "invalid" as const;
+  }
+
+  return {
+    start,
+    end: Math.min(requestedEnd, size - 1)
+  };
+}
+
+function assertSafeUploadPath(pathname: string) {
+  const normalized = pathname
+    .replace(/\\/g, "/")
+    .split("/")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join("/");
+
+  if (!normalized || normalized.includes("..")) {
+    throw new Error("Unsafe upload path");
+  }
+
+  const root = resolve(env.uploadDir);
+  const absolutePath = resolve(root, normalized);
+  const rootWithSeparator = root.endsWith(sep) ? root : `${root}${sep}`;
+
+  if (absolutePath !== root && !absolutePath.startsWith(rootWithSeparator)) {
+    throw new Error("Unsafe upload path");
+  }
+
+  return absolutePath;
+}
+
+function streamFileResponse(c: Context, absolutePath: string, size: number, contentType: string) {
+  const headers = new Headers({
+    "Accept-Ranges": "bytes",
+    "Cache-Control": "public, max-age=31536000, immutable",
+    "Content-Type": contentType
+  });
+
+  const range = parseRangeHeader(c.req.header("range") ?? null, size);
+
+  if (range === "invalid") {
+    headers.set("Content-Range", `bytes */${size}`);
+    return new Response(null, { status: 416, headers });
+  }
+
+  if (range) {
+    const chunkSize = range.end - range.start + 1;
+    headers.set("Content-Length", String(chunkSize));
+    headers.set("Content-Range", `bytes ${range.start}-${range.end}/${size}`);
+    return new Response(Readable.toWeb(createReadStream(absolutePath, { start: range.start, end: range.end })) as unknown as ReadableStream, { status: 206, headers });
+  }
+
+  headers.set("Content-Length", String(size));
+  return new Response(Readable.toWeb(createReadStream(absolutePath)) as unknown as ReadableStream, { headers });
 }
 
 async function ensureThumbnail(sourcePath: string, relativePath: string, sourceModifiedAt: Date) {
@@ -133,7 +222,22 @@ app.route("/api/admin", adminRoute);
 app.route("/api/explorer", explorerRoute);
 app.use("/api/uploads/*", uploadRateLimit);
 app.route("/api/uploads", uploadsRoute);
-app.use("/uploads/*", serveStatic({ root: "./" }));
+app.get("/uploads/*", async (c) => {
+  const rawPath = decodeURIComponent(c.req.path.replace(/^\/uploads\//, ""));
+
+  try {
+    const absolutePath = assertSafeUploadPath(rawPath);
+    const fileStat = await stat(absolutePath).catch(() => null);
+
+    if (!fileStat?.isFile()) {
+      return fail(c, "Upload not found", 404, { code: "UPLOAD_NOT_FOUND" });
+    }
+
+    return streamFileResponse(c, absolutePath, fileStat.size, contentTypeForPath(absolutePath));
+  } catch {
+    return fail(c, "Upload not found", 404, { code: "UPLOAD_NOT_FOUND" });
+  }
+});
 app.get("/content-thumbnails/*", async (c) => {
   const rawPath = decodeURIComponent(c.req.path.replace(/^\/content-thumbnails\//, ""));
 
@@ -168,10 +272,7 @@ app.get("/content/*", async (c) => {
       return fail(c, "Content not found", 404, { code: "CONTENT_NOT_FOUND" });
     }
 
-    c.header("Cache-Control", "public, max-age=31536000, immutable");
-    c.header("Content-Length", String(fileStat.size));
-    c.header("Content-Type", contentTypeForPath(absolutePath));
-    return new Response(Readable.toWeb(createReadStream(absolutePath)) as unknown as ReadableStream);
+    return streamFileResponse(c, absolutePath, fileStat.size, contentTypeForPath(absolutePath));
   } catch {
     return fail(c, "Content not found", 404, { code: "CONTENT_NOT_FOUND" });
   }
