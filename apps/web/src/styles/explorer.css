@@ -721,23 +721,22 @@
 .explorer-file-grid {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 340px));
-  justify-content: start;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
 }
 
 .explorer-folder-grid--small,
 .explorer-file-grid--small {
-  grid-template-columns: repeat(auto-fill, minmax(170px, 220px));
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
 }
 
 .explorer-folder-grid--medium,
 .explorer-file-grid--medium {
-  grid-template-columns: repeat(auto-fill, minmax(280px, 360px));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 }
 
 .explorer-folder-grid--large,
 .explorer-file-grid--large {
-  grid-template-columns: repeat(auto-fill, minmax(430px, 560px));
+  grid-template-columns: repeat(auto-fill, minmax(430px, 1fr));
 }
 
 .explorer-infinite-loader {
