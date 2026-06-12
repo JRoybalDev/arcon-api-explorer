@@ -21,12 +21,12 @@ type ThumbnailRunStats = {
 
 let thumbnailMaintenancePromise: Promise<ThumbnailRunStats> | null = null;
 
-// Resolved at first use — checks configured path then common fallbacks.
+// Resolved once at first use. env.ffmpegPath is always tried first.
 let resolvedFfmpegPath: string | null = null;
 let resolvedFfprobePath: string | null = null;
 
-async function resolveBinaryPath(configured: string, fallbacks: string[]): Promise<string | null> {
-  for (const candidate of [configured, ...fallbacks]) {
+async function findExecutable(candidates: string[]): Promise<string | null> {
+  for (const candidate of candidates) {
     try {
       await access(candidate, fsConstants.X_OK);
       return candidate;
@@ -34,26 +34,25 @@ async function resolveBinaryPath(configured: string, fallbacks: string[]): Promi
       // try next
     }
   }
-  // Last resort: ask the shell where it is
-  try {
-    const { stdout } = await execFileAsync("which", ["ffmpeg"]);
-    const found = stdout.trim();
-    if (found) return found;
-  } catch {
-    // not found
-  }
   return null;
 }
 
 async function getFfmpegPath(): Promise<string> {
   if (!resolvedFfmpegPath) {
-    resolvedFfmpegPath = await resolveBinaryPath(env.ffmpegPath, [
+    // env.ffmpegPath is always first — it's the admin-configured value
+    resolvedFfmpegPath = await findExecutable([
+      env.ffmpegPath,
       "/AMP/bun-app-runner/app/usr/bin/ffmpeg",
+      "/usr/bin/ffmpeg",
       "/usr/local/bin/ffmpeg",
-      "/bin/ffmpeg",
     ]);
     if (resolvedFfmpegPath) {
-      logger.info("explorer.thumbnail.ffmpeg_resolved", { path: resolvedFfmpegPath });
+      logger.info("explorer.thumbnail.ffmpeg_resolved", { path: resolvedFfmpegPath, configured: env.ffmpegPath });
+    } else {
+      logger.error("explorer.thumbnail.ffmpeg_not_found", {
+        configured: env.ffmpegPath,
+        tried: [env.ffmpegPath, "/AMP/bun-app-runner/app/usr/bin/ffmpeg", "/usr/bin/ffmpeg", "/usr/local/bin/ffmpeg"],
+      });
     }
   }
   if (!resolvedFfmpegPath) {
@@ -64,19 +63,22 @@ async function getFfmpegPath(): Promise<string> {
 
 async function getFfprobePath(): Promise<string> {
   if (!resolvedFfprobePath) {
-    // Derive ffprobe path from ffmpeg path
     const ffmpeg = await getFfmpegPath();
-    const probePath = ffmpeg.replace(/ffmpeg$/, "ffprobe");
-    resolvedFfprobePath = await resolveBinaryPath(env.ffmpegPath.replace(/ffmpeg$/, "ffprobe"), [
-      probePath,
+    const derived = ffmpeg.replace(/ffmpeg$/, "ffprobe");
+    resolvedFfprobePath = await findExecutable([
+      env.ffmpegPath.replace(/ffmpeg$/, "ffprobe"),
+      derived,
+      "/AMP/bun-app-runner/app/usr/bin/ffprobe",
       "/usr/bin/ffprobe",
-      "/usr/local/bin/ffprobe",
     ]);
+    if (resolvedFfprobePath) {
+      logger.info("explorer.thumbnail.ffprobe_resolved", { path: resolvedFfprobePath });
+    }
   }
+  // ffprobe is optional — fall back to derived path even if not verified
   return resolvedFfprobePath ?? (await getFfmpegPath()).replace(/ffmpeg$/, "ffprobe");
 }
 
-// Probe video duration using ffprobe — mirrors reference project's retry approach
 async function probeVideoDuration(videoPath: string, ffprobePath: string): Promise<number> {
   const { stdout } = await execFileAsync(ffprobePath, [
     "-v", "quiet",
@@ -112,18 +114,16 @@ async function createVideoThumbnail(sourcePath: string, outputPath: string) {
   const ffmpegPath = await getFfmpegPath();
   const ffprobePath = await getFfprobePath();
 
-  // Probe first (like reference project) to validate file and get duration
+  // Probe to get real duration so we seek to a non-black frame
   let seekTime = "00:00:01";
   try {
     const duration = await probeVideoDuration(sourcePath, ffprobePath);
-    // Pick a frame at ~10% into the video, capped at 10s — avoids black intros
     const seekSeconds = Math.min(Math.max(duration * 0.1, 1), 10);
     const mm = String(Math.floor(seekSeconds / 60)).padStart(2, "0");
     const ss = String(Math.floor(seekSeconds % 60)).padStart(2, "0");
     seekTime = `00:${mm}:${ss}`;
   } catch (probeErr) {
     logger.warn("explorer.thumbnail.ffprobe_failed", { sourcePath, error: String(probeErr) });
-    // Fall back to 1s seek — don't abort
   }
 
   const MAX_RETRIES = 3;
@@ -140,13 +140,7 @@ async function createVideoThumbnail(sourcePath: string, outputPath: string) {
           outputPath,
         ];
 
-        logger.info("explorer.thumbnail.ffmpeg_start", {
-          ffmpegPath,
-          args,
-          sourcePath,
-          outputPath,
-          attempt,
-        });
+        logger.info("explorer.thumbnail.ffmpeg_start", { ffmpegPath, sourcePath, outputPath, seekTime, attempt });
 
         const child = spawn(ffmpegPath, args, { stdio: ["ignore", "ignore", "pipe"] });
 
@@ -161,14 +155,11 @@ async function createVideoThumbnail(sourcePath: string, outputPath: string) {
 
         child.once("error", (error) => {
           clearTimeout(timeout);
-          // If the binary itself failed to spawn, invalidate the resolved path so
-          // next call will re-probe (in case it was a transient mount issue).
-          if ((error as any).code === "ENOENT") {
+          if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+            // Binary disappeared — force re-resolution next call
             resolvedFfmpegPath = null;
           }
-          logger.warn("explorer.thumbnail.ffmpeg_spawn_error", {
-            error: String(error), ffmpegPath, sourcePath, outputPath, attempt,
-          });
+          logger.warn("explorer.thumbnail.ffmpeg_spawn_error", { error: String(error), ffmpegPath, sourcePath, attempt });
           rejectPromise(error);
         });
 
@@ -177,27 +168,21 @@ async function createVideoThumbnail(sourcePath: string, outputPath: string) {
           const durationMs = Date.now() - started;
           if (code === 0) {
             const outStat = await stat(outputPath).catch(() => null);
-            logger.info("explorer.thumbnail.ffmpeg_success", {
-              sourcePath, outputPath, durationMs, size: outStat?.size ?? null, attempt,
-            });
+            logger.info("explorer.thumbnail.ffmpeg_success", { sourcePath, outputPath, durationMs, size: outStat?.size ?? null, attempt });
             resolvePromise();
             return;
           }
-          logger.warn("explorer.thumbnail.ffmpeg_failed", {
-            code, stderr: stderr.trim(), durationMs, sourcePath, outputPath, attempt,
-          });
+          logger.warn("explorer.thumbnail.ffmpeg_failed", { code, stderr: stderr.trim(), durationMs, sourcePath, outputPath, attempt });
           rejectPromise(new Error(`ffmpeg exited with code ${code ?? "unknown"}: ${stderr.trim()}`));
         });
       });
 
-      return; // success — exit retry loop
+      return; // success
     } catch (err) {
       lastError = err;
       if (attempt < MAX_RETRIES) {
         const delay = attempt * 500;
-        logger.warn("explorer.thumbnail.ffmpeg_retrying", {
-          attempt, delay, sourcePath, error: String(err),
-        });
+        logger.warn("explorer.thumbnail.ffmpeg_retrying", { attempt, delay, sourcePath, error: String(err) });
         await new Promise((r) => setTimeout(r, delay));
       }
     }
@@ -276,18 +261,11 @@ async function generateContentThumbnails(options: { force: boolean }): Promise<T
         }
       } catch (error) {
         stats.failed += 1;
-        logger.warn("explorer.thumbnail_maintenance.item_failed", {
-          error,
-          storageKey: media.storageKey,
-        });
+        logger.warn("explorer.thumbnail_maintenance.item_failed", { error, storageKey: media.storageKey });
       }
     }
 
-    logger.info("explorer.thumbnails.completed", {
-      ...stats,
-      durationMs: Date.now() - startedAt,
-    });
-
+    logger.info("explorer.thumbnails.completed", { ...stats, durationMs: Date.now() - startedAt });
     return stats;
   })().finally(() => {
     thumbnailMaintenancePromise = null;
