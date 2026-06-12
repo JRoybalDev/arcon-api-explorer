@@ -48,7 +48,7 @@ async function resolveBinaryPath(configured: string, fallbacks: string[]): Promi
 async function getFfmpegPath(): Promise<string> {
   if (!resolvedFfmpegPath) {
     resolvedFfmpegPath = await resolveBinaryPath(env.ffmpegPath, [
-      "/usr/bin/ffmpeg",
+      "/AMP/bun-app-runner/app/usr/bin/ffmpeg",
       "/usr/local/bin/ffmpeg",
       "/bin/ffmpeg",
     ]);
