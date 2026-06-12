@@ -104,6 +104,70 @@ export function FileViewerModal({
     setZoomScale(1);
   }, [file.id, autoEnabled]);
 
+  // Autoplay and restore remembered volume/mute when a video is loaded
+  useEffect(() => {
+    const vid = videoRef.current;
+    if (!vid || !isVideo) return;
+
+    // Restore saved volume/muted from localStorage
+    try {
+      const saved = localStorage.getItem("explorer_video_volume");
+      if (saved !== null) {
+        const parsed = JSON.parse(saved) as { volume: number; muted: boolean } | null;
+        if (parsed && typeof parsed.volume === "number") {
+          vid.volume = clamp(parsed.volume, 0, 1);
+        }
+        vid.muted = !!parsed?.muted;
+      }
+    } catch (e) {
+      // ignore storage errors
+    }
+
+    // If the video is already ready, try play immediately, otherwise wait for metadata
+    const tryPlay = async (allowMutedFallback = true) => {
+      try {
+        await vid.play();
+      } catch (err) {
+        // Autoplay may be blocked with sound; try muted fallback if allowed
+        if (allowMutedFallback) {
+          const prevMuted = vid.muted;
+          vid.muted = true;
+          try {
+            await vid.play();
+          } catch (err2) {
+            // give up silently
+            vid.muted = prevMuted;
+          }
+        }
+      }
+    };
+
+    if (vid.readyState >= 2) {
+      void tryPlay(true);
+    } else {
+      const handleLoaded = () => void tryPlay(true);
+      vid.addEventListener("loadeddata", handleLoaded, { once: true });
+    }
+
+    // Persist volume/muted changes
+    const handleVolumeChange = () => {
+      try {
+        localStorage.setItem(
+          "explorer_video_volume",
+          JSON.stringify({ volume: vid.volume, muted: vid.muted })
+        );
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    vid.addEventListener("volumechange", handleVolumeChange);
+
+    return () => {
+      vid.removeEventListener("volumechange", handleVolumeChange);
+    };
+  }, [file.id, isVideo]);
+
   useEffect(() => {
     return () => {
       if (chromeTimer.current) {
@@ -187,6 +251,36 @@ export function FileViewerModal({
 
   async function enterFullscreen(targetRef: RefObject<HTMLElement | null>) {
     await targetRef.current?.requestFullscreen?.();
+
+    // After entering fullscreen, attempt to play the video and restore remembered volume
+    const vid = videoRef.current;
+    if (!vid) return;
+
+    try {
+      const saved = localStorage.getItem("explorer_video_volume");
+      if (saved) {
+        const parsed = JSON.parse(saved) as { volume: number; muted: boolean } | null;
+        if (parsed && typeof parsed.volume === "number") {
+          vid.volume = clamp(parsed.volume, 0, 1);
+        }
+        vid.muted = !!parsed?.muted;
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    try {
+      await vid.play();
+    } catch (err) {
+      // try muted fallback
+      const prev = vid.muted;
+      vid.muted = true;
+      try {
+        await vid.play();
+      } catch (err2) {
+        vid.muted = prev;
+      }
+    }
   }
 
   function requestClose() {
@@ -501,7 +595,9 @@ export function FileViewerModal({
     return (
       <>
         {targetIsImage ? <img alt="" src={targetFile.url} /> : null}
-        {targetIsVideo ? <video controls={!hiddenVideoControls} muted={hiddenVideoControls} playsInline src={targetFile.url} /> : null}
+        {targetIsVideo ? (
+          <video autoPlay controls={!hiddenVideoControls} muted={hiddenVideoControls} playsInline src={targetFile.url} />
+        ) : null}
         {!targetIsImage && !targetIsVideo ? <a href={targetFile.url}>Open file</a> : null}
       </>
     );
@@ -592,7 +688,17 @@ export function FileViewerModal({
           }}
         >
           {isImage ? <img alt="" src={file.url} /> : null}
-          {isVideo ? <video ref={videoRef} controls loop={loopEnabled && !autoEnabled} src={file.url} onEnded={handleVideoEnded} /> : null}
+          {isVideo ? (
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              controls
+              loop={loopEnabled && !autoEnabled}
+              src={file.url}
+              onEnded={handleVideoEnded}
+            />
+          ) : null}
           {!isImage && !isVideo ? <a href={file.url}>Open file</a> : null}
         </div>
       </motion.div>
