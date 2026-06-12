@@ -1,7 +1,7 @@
 import { type MouseEvent, type RefObject, type TouchEvent, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { FiArrowLeft, FiCopy, FiDownload, FiHeart, FiImage, FiLock, FiMaximize2, FiMoreVertical, FiPauseCircle, FiPlayCircle, FiPlus, FiRefreshCw, FiShuffle, FiSkipBack, FiSkipForward, FiTrash2, FiX, FiZap } from "react-icons/fi";
-import { FaDice } from "react-icons/fa";
+import { FaDice, FaHeart } from "react-icons/fa";
 import type { ExplorerFile } from "./types";
 
 type FileViewerModalProps = {
@@ -638,8 +638,8 @@ export function FileViewerModal({
         </button>
         <strong>{formatDate(file.createdAt)}</strong>
         <div className="explorer-viewer__mobile-header-actions">
-          <button className={isFavorite ? "active" : ""} type="button" onClick={() => onFavoriteToggle(file.id)} aria-label="Favorite">
-            <FiHeart aria-hidden />
+          <button className={isFavorite ? "active" : ""} type="button" onClick={() => onFavoriteToggle(file.id)} aria-label={isFavorite ? "Unfavorite" : "Favorite"}>
+            {isFavorite ? <FaHeart aria-hidden /> : <FiHeart aria-hidden />}
           </button>
           <button type="button" onClick={() => setMobileMenuOpen((current) => !current)} aria-label="Viewer options" aria-expanded={mobileMenuOpen}>
             <FiMoreVertical aria-hidden />
@@ -805,8 +805,8 @@ export function FileViewerModal({
           </div>
 
           <div className="explorer-viewer__controls-row">
-            <button className="explorer-viewer__control-action" aria-label="Favorite" aria-pressed={isFavorite} type="button" onClick={() => onFavoriteToggle(file.id)} title="Favorite">
-              <FiHeart aria-hidden /> <span>Favorite</span>
+            <button className="explorer-viewer__control-action" aria-label={isFavorite ? "Unfavorite" : "Favorite"} aria-pressed={isFavorite} type="button" onClick={() => onFavoriteToggle(file.id)} title={isFavorite ? "Unfavorite" : "Favorite"}>
+              {isFavorite ? <FaHeart aria-hidden /> : <FiHeart aria-hidden />} <span>Favorite</span>
             </button>
 
             {isVideo ? (
