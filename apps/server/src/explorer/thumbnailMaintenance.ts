@@ -1,5 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { mkdir, rm, stat } from "node:fs/promises";
+import { mkdir, rm, stat, access } from "node:fs/promises";
+import { constants as fsConstants } from "node:fs";
 import { dirname } from "node:path";
 import { spawn } from "node:child_process";
 import sharp from "sharp";
@@ -35,14 +36,31 @@ function isThumbnailable(contentType: string) {
 }
 
 async function createVideoThumbnail(sourcePath: string, outputPath: string) {
+  // If ffmpeg was previously marked unavailable, re-check availability in case env changed.
   if (!videoThumbnailingAvailable) {
-    throw new Error("Video thumbnailing is unavailable");
+    try {
+      await access(env.ffmpegPath, fsConstants.X_OK);
+      videoThumbnailingAvailable = true;
+    } catch {
+      throw new Error("Video thumbnailing is unavailable");
+    }
   }
 
   await new Promise<void>((resolvePromise, rejectPromise) => {
-    const child = spawn(env.ffmpegPath, ["-y", "-ss", "00:00:01", "-i", sourcePath, "-frames:v", "1", "-vf", "scale=min(720\\,iw):-2", "-quality", "74", outputPath], {
-      stdio: "ignore"
-    });
+    // Capture stderr so we can log ffmpeg diagnostics when it fails.
+    const args = ["-y", "-ss", "00:00:01", "-i", sourcePath, "-frames:v", "1", "-vf", "scale=min(720,iw):-2", outputPath];
+    logger.info("explorer.thumbnail.ffmpeg_start", { ffmpegPath: env.ffmpegPath, args, sourcePath, outputPath });
+
+    const child = spawn(env.ffmpegPath, args, { stdio: ["ignore", "ignore", "pipe"] });
+
+    let stderr = "";
+    if (child.stderr) {
+      child.stderr.on("data", (chunk) => {
+        stderr += chunk.toString();
+      });
+    }
+
+    const started = Date.now();
     const timeout = setTimeout(() => {
       child.kill("SIGKILL");
       rejectPromise(new Error("Video thumbnail generation timed out"));
@@ -50,16 +68,22 @@ async function createVideoThumbnail(sourcePath: string, outputPath: string) {
 
     child.once("error", (error) => {
       clearTimeout(timeout);
+      logger.warn("explorer.thumbnail.ffmpeg_error", { error: String(error), sourcePath, outputPath });
       rejectPromise(error);
     });
-    child.once("exit", (code) => {
+
+    child.once("exit", async (code) => {
       clearTimeout(timeout);
+      const durationMs = Date.now() - started;
       if (code === 0) {
+        const outStat = await stat(outputPath).catch(() => null);
+        logger.info("explorer.thumbnail.ffmpeg_success", { sourcePath, outputPath, durationMs, size: outStat?.size ?? null });
         resolvePromise();
         return;
       }
 
-      rejectPromise(new Error(`ffmpeg exited with code ${code ?? "unknown"}`));
+      logger.warn("explorer.thumbnail.ffmpeg_failed", { code, stderr: stderr.trim(), durationMs, sourcePath, outputPath });
+      rejectPromise(new Error(`ffmpeg exited with code ${code ?? "unknown"}: ${stderr.trim()}`));
     });
   });
 }
