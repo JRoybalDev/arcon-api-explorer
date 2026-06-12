@@ -19,7 +19,7 @@ export function FileCard({ file, isSelected = false, isSelectionMode = false, vi
   const isList = view === "list";
   const thumbnailUrl = mediaThumbnailUrl(file);
   const [thumbnailFailed, setThumbnailFailed] = useState(false);
-  console.log("THUMBNAIL", thumbnailUrl, " | ", file.name," \n================================ ")
+  // console.log("THUMBNAIL", thumbnailUrl, " | ", file.name," \n================================ ")
   const cardClassName = [
     "explorer-file-card",
     isList ? "explorer-file-card--list" : "",
