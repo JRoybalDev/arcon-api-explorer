@@ -323,20 +323,42 @@ app.get("/content-thumbnails/*", async (c) => {
     c.header("Content-Type", "image/webp");
     return new Response(Readable.toWeb(createReadStream(thumbnail.absolutePath)) as unknown as ReadableStream);
   } catch (error) {
-    const errorCode = typeof error === "object" && error && "code" in error ? error.code : "";
+    const errorCode = typeof error === "object" && error && "code" in error ? (error as any).code : "";
     const isMissingFfmpeg = errorCode === "ENOENT";
+    const requestId = c.get("requestId");
 
     if (isMissingFfmpeg) {
       videoThumbnailingAvailable = false;
       logger.warn("content.video_thumbnailing_unavailable", {
         ffmpegPath: env.ffmpegPath,
-        error: "FFmpeg was not found. Install ffmpeg or set FFMPEG_PATH to enable video thumbnails."
+        path: rawPath,
+        requestId,
+        error: "FFmpeg not found. Install ffmpeg or set FFMPEG_PATH to enable video thumbnails."
       });
-    } else if (videoThumbnailingAvailable) {
-      logger.warn("content.thumbnail_failed", { error });
+
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="405" viewBox="0 0 16 9" preserveAspectRatio="xMidYMid slice"><rect width="100%" height="100%" fill="#f3f4f6"/><g fill="#9ca3af"><circle cx="8" cy="4.5" r="2.2" /></g><polygon fill="#6b7280" points="6.2,4 10,4.5 6.2,5" /></svg>`;
+      const headers = new Headers({
+        "Content-Type": "image/svg+xml",
+        "Cache-Control": "public, max-age=31536000, immutable"
+      });
+
+      return new Response(svg, { status: 200, headers });
     }
 
-    return fail(c, "Thumbnail not found", 404, { code: "THUMBNAIL_NOT_FOUND" });
+    logger.warn("content.thumbnail_failed", {
+      error: String(error),
+      path: rawPath,
+      requestId
+    });
+
+    // Return a lightweight SVG placeholder rather than a 404 so the UI doesn't show broken images.
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="405" viewBox="0 0 16 9" preserveAspectRatio="xMidYMid slice"><rect width="100%" height="100%" fill="#fafafa"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9ca3af" font-family="Arial,Helvetica,sans-serif" font-size="0.9">Thumbnail unavailable</text></svg>`;
+    const headers = new Headers({
+      "Content-Type": "image/svg+xml",
+      "Cache-Control": "public, max-age=3600"
+    });
+
+    return new Response(svg, { status: 200, headers });
   }
 });
 app.get("/content/*", async (c) => {
