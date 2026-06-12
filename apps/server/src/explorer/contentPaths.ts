@@ -2,7 +2,7 @@ import { resolve, sep } from "node:path";
 import { env } from "../env";
 
 const ignoredDirectories = new Set(["$RECYCLE.BIN", "System Volume Information", "Recovery", "Config.Msi", "thumbnails", ".thumbnails", "thumbs", ".thumbs", "NeedToSort"]);
-export const thumbnailCacheDirectories = [".arcon-thumbnails", ".arcon_thumbnails"] as const;
+export const thumbnailCacheDirectories = [".arcon-thumbnails"] as const;
 
 export const imageExtensions = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff"]);
 export const videoExtensions = new Set([".mp4", ".webm", ".mov", ".avi", ".mkv", ".flv", ".wmv", ".m4v", ".3gp", ".ts"]);
