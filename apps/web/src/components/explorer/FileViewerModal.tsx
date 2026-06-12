@@ -656,8 +656,11 @@ export function FileViewerModal({
         transition: swipeState === "close" || swipeState === "reset" ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)" : "none"
       }}
     >
-      <header className={`explorer-viewer__mobile-header ${viewerChromeVisible || mobileMenuOpen ? "is-visible" : "is-hidden"}`}>
-        <button type="button" onClick={requestClose} aria-label="Close viewer">
+      <header
+        className={`explorer-viewer__mobile-header ${viewerChromeVisible || mobileMenuOpen ? "is-visible" : "is-hidden"}`}
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
+      >
+        <button type="button" onClick={onClose} aria-label="Close viewer">
           <FiArrowLeft aria-hidden />
         </button>
         <strong>{formatDate(file.createdAt)}</strong>
@@ -881,7 +884,11 @@ export function FileViewerModal({
         </div>
       </motion.aside>
 
-      <nav className={`explorer-viewer__mobile-actions ${viewerChromeVisible ? "is-visible" : "is-hidden"}`} aria-label="Viewer actions">
+      <nav
+        className={`explorer-viewer__mobile-actions ${viewerChromeVisible ? "is-visible" : "is-hidden"}`}
+        aria-label="Viewer actions"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)" }}
+      >
         <button type="button" onClick={onRandom}>
           <FaDice aria-hidden /> <span>Random</span>
         </button>

@@ -434,53 +434,73 @@ export function ContentArea({
           </div>
         ) : null}
 
-        {folders.length > 0 ? (
-          <section className="explorer-section" aria-labelledby="explorer-folders-heading">
-            <div className="explorer-section__label" id="explorer-folders-heading">
-              Folders <span>{folders.length}</span>
-            </div>
-            <div className={`explorer-folder-grid explorer-folder-grid--${view}`}>
-              {folders.map((folder) => (
-                <FolderCard folder={folder} key={folder.id} onOpen={onFolderOpen} filter={filter} sort={sort} />
-              ))}
+        {isLoadingFiles ? (
+          <section className="explorer-section" aria-live="polite" aria-busy="true">
+            <div className="explorer-section__label">Loading…</div>
+            <div className="explorer-loading">
+              <div className={`explorer-folder-grid explorer-folder-grid--${view}`} aria-hidden>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="explorer-folder-card explorer-folder-card--skeleton" />
+                ))}
+              </div>
+
+              <div className={`explorer-file-grid explorer-file-grid--${view}`} ref={fileGridRef} aria-hidden>
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div key={i} className="explorer-file-card explorer-file-card--skeleton" />
+                ))}
+              </div>
             </div>
           </section>
-        ) : null}
+        ) : (
+          <>
+            {folders.length > 0 ? (
+              <section className="explorer-section" aria-labelledby="explorer-folders-heading">
+                <div className="explorer-section__label" id="explorer-folders-heading">
+                  Folders <span>{folders.length}</span>
+                </div>
+                <div className={`explorer-folder-grid explorer-folder-grid--${view}`}>
+                  {folders.map((folder) => (
+                    <FolderCard folder={folder} key={folder.id} onOpen={onFolderOpen} filter={filter} sort={sort} />
+                  ))}
+                </div>
+              </section>
+            ) : null}
 
-        <section className="explorer-section" aria-labelledby="explorer-files-heading">
-          <div className="explorer-section__label" id="explorer-files-heading">
-            Files <span>{totalFiles ?? files.length}</span>
-          </div>
-          {isLoadingFiles ? <p className="explorer-empty">Loading files...</p> : null}
-          {!isLoadingFiles && files.length === 0 ? <p className="explorer-empty">No files match this view.</p> : null}
-          {view === "list" && files.length > 0 ? (
-            <div className="explorer-list-head" aria-hidden>
-              <span>Name</span>
-              <span>Folder</span>
-              <span>Size</span>
-              <span>Date</span>
-            </div>
-          ) : null}
-          <div className={`explorer-file-grid explorer-file-grid--${view}`} ref={fileGridRef}>
-            {files.map((file) => (
-              <FileCard
-                file={file}
-                isSelected={selectedFileIds.includes(file.id)}
-                isSelectionMode={selectionMode}
-                key={file.id}
-                onOpen={onSelectedFileChange}
-                onSelectToggle={toggleFileSelection}
-                view={view}
-              />
-            ))}
-          </div>
-          {canLoadMoreFiles ? (
-            <div className="explorer-infinite-loader" ref={infiniteLoaderRef} role="status" aria-live="polite">
-              <span aria-hidden />
-              {isLoadingMoreFiles ? "Loading more..." : "Scroll for more"}
-            </div>
-          ) : null}
-        </section>
+            <section className="explorer-section" aria-labelledby="explorer-files-heading">
+              <div className="explorer-section__label" id="explorer-files-heading">
+                Files <span>{totalFiles ?? files.length}</span>
+              </div>
+              {!isLoadingFiles && files.length === 0 ? <p className="explorer-empty">No files match this view.</p> : null}
+              {view === "list" && files.length > 0 ? (
+                <div className="explorer-list-head" aria-hidden>
+                  <span>Name</span>
+                  <span>Folder</span>
+                  <span>Size</span>
+                  <span>Date</span>
+                </div>
+              ) : null}
+              <div className={`explorer-file-grid explorer-file-grid--${view}`} ref={fileGridRef}>
+                {files.map((file) => (
+                  <FileCard
+                    file={file}
+                    isSelected={selectedFileIds.includes(file.id)}
+                    isSelectionMode={selectionMode}
+                    key={file.id}
+                    onOpen={onSelectedFileChange}
+                    onSelectToggle={toggleFileSelection}
+                    view={view}
+                  />
+                ))}
+              </div>
+              {canLoadMoreFiles ? (
+                <div className="explorer-infinite-loader" ref={infiniteLoaderRef} role="status" aria-live="polite">
+                  <span aria-hidden />
+                  {isLoadingMoreFiles ? "Loading more..." : "Scroll for more"}
+                </div>
+              ) : null}
+            </section>
+          </>
+        )}
       </main>
 
       <button className="explorer-help-button" type="button" aria-label="Help">
