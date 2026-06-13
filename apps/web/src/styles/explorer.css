@@ -2484,8 +2484,30 @@
     grid-template-columns: 1fr;
     grid-template-rows: minmax(0, 1fr);
     overflow: hidden;
-    padding-bottom: env(safe-area-inset-bottom);
-    padding-top: env(safe-area-inset-top);
+    /* allow content to expand to the very top and bottom of the screen in PWA/standalone */
+    padding-bottom: 0;
+    padding-top: 0;
+  }
+
+  /* subtle translucent separators to align with the pinned header/footer bars */
+  .explorer-viewer::before,
+  .explorer-viewer::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, rgba(59,130,246,0.14), rgba(59,130,246,0.06));
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .explorer-viewer::before {
+    top: 0;
+  }
+
+  .explorer-viewer::after {
+    bottom: 0;
   }
 
   .explorer-viewer__counter,
@@ -2503,10 +2525,11 @@
     grid-template-columns: 44px minmax(0, 1fr) auto;
     left: 0;
     min-height: 80px;
-    padding: 0 14px;
+    /* pin to the very top of the viewport; content inside is padded by the safe-area inset */
+    padding: calc(env(safe-area-inset-top, 0px) + 8px) 14px 0;
     position: absolute;
     right: 0;
-    top: env(safe-area-inset-top);
+    top: 0;
     transition: opacity 180ms ease, transform 180ms ease;
     z-index: 6;
   }
@@ -2648,12 +2671,13 @@
   .explorer-viewer__mobile-actions {
     align-items: center;
     background: transparent;
-    bottom: env(safe-area-inset-bottom);
+    /* pin to the very bottom of the viewport so controls sit on the bottom blue line */
+    bottom: 0;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     left: 0;
     min-height: 78px;
-    padding: 8px 10px 12px;
+    padding: 8px 10px calc(env(safe-area-inset-bottom, 0px) + 12px);
     position: absolute;
     right: 0;
     transition: opacity 180ms ease, transform 180ms ease;

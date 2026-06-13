@@ -16,7 +16,13 @@ function Explorer() {
     const adminSession = useAdminSession();
     const queryClient = useQueryClient();
     const navigate = useNavigate();
-    const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
+    const [activeFolderId, setActiveFolderId] = useState<string | null>(() => {
+        try {
+            return localStorage.getItem("explorer.activeFolderId");
+        } catch {
+            return null;
+        }
+    });
     const [autoEnabled, setAutoEnabled] = useState(false);
     const [filter, setFilter] = useState<ExplorerFilter>("all");
     const [loopEnabled, setLoopEnabled] = useState(false);
@@ -31,7 +37,24 @@ function Explorer() {
     const [uploadMinimized, setUploadMinimized] = useState(false);
     const [uploadModalOpen, setUploadModalOpen] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<UploadProgressState>({ isActive: false, label: "Preparing upload...", percent: 0 });
-    const [view, setView] = useState<ExplorerView>("medium");
+    const [view, setView] = useState<ExplorerView>(() => {
+        try {
+            // If user has a saved view, respect it
+            const saved = localStorage.getItem("explorer.view");
+            if (saved === "small" || saved === "medium" || saved === "large" || saved === "list") {
+                return saved as ExplorerView;
+            }
+
+            // Default to the square option on mobile
+            if (typeof window !== "undefined" && window.innerWidth <= 768) {
+                return "small";
+            }
+        } catch {
+            // ignore
+        }
+
+        return "medium";
+    });
     const [mediaPageSize, setMediaPageSize] = useState(60);
     const [mediaLimit, setMediaLimit] = useState(mediaPageSize);
     const uploadAbortControllerRef = useRef<AbortController | null>(null);
@@ -59,7 +82,6 @@ function Explorer() {
                 sort
             }),
         enabled: adminSession.isUnlocked,
-        placeholderData: (previousData) => previousData,
         retry: false
     });
 
@@ -145,6 +167,15 @@ function Explorer() {
 
     function selectFolder(folderId: string | null) {
         setActiveFolderId(folderId);
+        try {
+            if (folderId === null) {
+                localStorage.removeItem("explorer.activeFolderId");
+            } else {
+                localStorage.setItem("explorer.activeFolderId", folderId);
+            }
+        } catch {
+            // ignore storage errors
+        }
         setSelectedFileId(null);
         setSelectedExternalFile(null);
         setSelectedFileIndexOverride(null);
@@ -452,7 +483,14 @@ function Explorer() {
                     setUploadMinimized(false);
                     setUploadModalOpen(true);
                 }}
-                onViewChange={setView}
+                onViewChange={(next: ExplorerView) => {
+                    setView(next);
+                    try {
+                        localStorage.setItem("explorer.view", next);
+                    } catch {
+                        // ignore
+                    }
+                }}
                 searchQuery={searchQuery}
                 selectedFile={selectedFile}
                 selectedFileIndex={selectedFileIndex}

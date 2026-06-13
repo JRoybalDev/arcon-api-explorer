@@ -437,17 +437,13 @@ export function ContentArea({
         {isLoadingFiles ? (
           <section className="explorer-section" aria-live="polite" aria-busy="true">
             <div className="explorer-section__label">Loading…</div>
-            <div className="explorer-loading">
-              <div className={`explorer-folder-grid explorer-folder-grid--${view}`} aria-hidden>
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="explorer-folder-card explorer-folder-card--skeleton" />
-                ))}
-              </div>
-
-              <div className={`explorer-file-grid explorer-file-grid--${view}`} ref={fileGridRef} aria-hidden>
-                {Array.from({ length: 12 }).map((_, i) => (
-                  <div key={i} className="explorer-file-card explorer-file-card--skeleton" />
-                ))}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+              <div role="status" aria-label="Loading files">
+                <svg width="36" height="36" viewBox="0 0 50 50" aria-hidden>
+                  <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeDasharray="31.4 31.4">
+                    <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite" />
+                  </circle>
+                </svg>
               </div>
             </div>
           </section>
