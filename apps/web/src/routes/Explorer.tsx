@@ -6,7 +6,7 @@ import { apiFolderToExplorerFolder, apiMediaToExplorerFile, type ExplorerFile, t
 import { apiClient } from "../shared/apiClient";
 import { LoadingScreen } from "../shared/Loading";
 import { useAdminSession } from "../shared/useAdminSession";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -25,7 +25,7 @@ function Explorer() {
     });
     const [autoEnabled, setAutoEnabled] = useState(false);
     const [filter, setFilter] = useState<ExplorerFilter>("all");
-    const [loopEnabled, setLoopEnabled] = useState(false);
+    const [loopEnabled, setLoopEnabled] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedExternalFile, setSelectedExternalFile] = useState<ExplorerFile | null>(null);
     const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
@@ -55,7 +55,20 @@ function Explorer() {
 
         return "medium";
     });
-    const [mediaPageSize, setMediaPageSize] = useState(60);
+        const [autoAdvanceSettings, setAutoAdvanceSettings] = useState(() => {
+        try {
+            const saved = localStorage.getItem("explorer.autoAdvanceSettings");
+            if (saved) return JSON.parse(saved);
+        } catch {
+            /* ignore */
+        }
+        return { imageDuration: 10, videoThreshold: 30, videoLoops: 2 };
+    });
+
+    useEffect(() => {
+        localStorage.setItem("explorer.autoAdvanceSettings", JSON.stringify(autoAdvanceSettings));
+    }, [autoAdvanceSettings]);
+    const [mediaPageSize, setMediaPageSize] = useState(20);
     const [mediaLimit, setMediaLimit] = useState(mediaPageSize);
     const uploadAbortControllerRef = useRef<AbortController | null>(null);
 
@@ -82,6 +95,7 @@ function Explorer() {
                 sort
             }),
         enabled: adminSession.isUnlocked,
+        placeholderData: keepPreviousData,
         retry: false
     });
 
@@ -129,6 +143,8 @@ function Explorer() {
     const favoriteIds = useMemo(() => visibleFiles.filter((file) => file.favorite).map((file) => file.id), [visibleFiles]);
     const mediaTotal = contentsQuery.data?.mediaTotal ?? visibleFiles.length;
     const canLoadMoreMedia = visibleFiles.length < mediaTotal;
+
+    const storageUsed = useMemo(() => visibleFiles.reduce((total, file) => total + file.size, 0), [visibleFiles]);
 
     const selectedFile = useMemo(
         () => visibleFiles.find((file) => file.id === selectedFileId) ?? (selectedExternalFile?.id === selectedFileId ? selectedExternalFile : null),
@@ -441,7 +457,7 @@ function Explorer() {
                 folders={allFolders}
                 onFolderSelect={selectFolder}
                 storageTotal={180_000_000_000}
-                storageUsed={visibleFiles.reduce((total, file) => total + file.size, 0)}
+                storageUsed={storageUsed}
                 totalItems={allFolders.length + visibleFiles.length}
             />
             <ContentArea
@@ -452,8 +468,12 @@ function Explorer() {
                 files={visibleFiles}
                 filter={filter}
                 folders={visibleFolders}
-                isLoadingFiles={contentsQuery.isLoading || foldersQuery.isLoading}
-                isLoadingMoreFiles={contentsQuery.isFetching && !contentsQuery.isLoading}
+                isLoadingFiles={
+                    foldersQuery.isLoading || 
+                    contentsQuery.isLoading || 
+                    (contentsQuery.isPlaceholderData && contentsQuery.isFetching && mediaLimit === mediaPageSize)
+                }
+                isLoadingMoreFiles={contentsQuery.isPlaceholderData && contentsQuery.isFetching && mediaLimit > mediaPageSize}
                 loopEnabled={loopEnabled}
                 onAutoToggle={() => setAutoEnabled((current) => !current)}
                 onFavoriteToggle={toggleFavorite}
@@ -467,6 +487,7 @@ function Explorer() {
                 onLoopToggle={() => setLoopEnabled((current) => !current)}
                 onLoadMoreFiles={loadMoreMedia}
                 onMediaPageSizeChange={updateMediaPageSize}
+                autoAdvanceSettings={autoAdvanceSettings}
                 onModalClose={() => {
                     setSelectedFileId(null);
                     setSelectedExternalFile(null);

@@ -1,6 +1,6 @@
 import { type MouseEvent, type RefObject, type TouchEvent, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { FiArrowLeft, FiCopy, FiDownload, FiHeart, FiImage, FiLock, FiMaximize2, FiMoreVertical, FiPauseCircle, FiPlayCircle, FiPlus, FiRefreshCw, FiShuffle, FiSkipBack, FiSkipForward, FiTrash2, FiVideo, FiX, FiZap } from "react-icons/fi";
+import { FiArrowLeft, FiCopy, FiDownload, FiHeart, FiImage, FiLock, FiMaximize2, FiMoreVertical, FiPauseCircle, FiPlayCircle, FiPlus, FiRefreshCw, FiRepeat, FiRotateCw, FiShuffle, FiSkipBack, FiSkipForward, FiTrash2, FiVideo, FiX, FiZap } from "react-icons/fi";
 import { FaDice, FaHeart } from "react-icons/fa";
 import { mediaThumbnailUrl, type ExplorerFile } from "./types";
 import VideoPlayer from "./VideoPlayer";
@@ -22,6 +22,11 @@ type FileViewerModalProps = {
   onRandom: () => void;
   onShuffle: () => void;
   onTagsChange: (fileId: string, tags: string[]) => void;
+  autoAdvanceSettings: {
+    imageDuration: number;
+    videoThreshold: number;
+    videoLoops: number;
+  };
 };
 
 type SwipeState = "next" | "previous" | "close" | "reset" | null;
@@ -43,7 +48,8 @@ export function FileViewerModal({
   onNavigateByOffset,
   onRandom,
   onShuffle,
-  onTagsChange
+  onTagsChange,
+  autoAdvanceSettings
 }: FileViewerModalProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
@@ -67,6 +73,17 @@ export function FileViewerModal({
   const [tagEditorOpen, setTagEditorOpen] = useState(false);
   const [videoLoops, setVideoLoops] = useState(0);
   const [zoomScale, setZoomScale] = useState(1);
+  const [isMobileView, setIsMobileView] = useState(false);
+  const [isRotated, setIsRotated] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 768px)");
+    setIsMobileView(query.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobileView(e.matches);
+    query.addEventListener("change", handler);
+    return () => query.removeEventListener("change", handler);
+  }, []);
+
   const isImage = file.contentType.startsWith("image/");
   const isVideo = file.contentType.startsWith("video/");
   const isFavorite = favoriteIds.includes(file.id);
@@ -103,6 +120,7 @@ export function FileViewerModal({
     setTagDraft("");
     setTagEditorOpen(false);
     setZoomScale(1);
+    setIsRotated(false);
   }, [file.id, autoEnabled]);
 
   // Autoplay and restore remembered volume/mute when a video is loaded
@@ -199,10 +217,10 @@ export function FileViewerModal({
 
     const timer = window.setTimeout(() => {
       goNext();
-    }, 5000);
+    }, (autoAdvanceSettings.imageDuration || 10) * 1000);
 
     return () => window.clearTimeout(timer);
-  }, [autoEnabled, isVideo, file.id, totalFiles]);
+  }, [autoEnabled, isVideo, file.id, totalFiles, autoAdvanceSettings.imageDuration]);
 
   useEffect(() => {
     function closeOnEscape(event: KeyboardEvent) {
@@ -247,7 +265,8 @@ export function FileViewerModal({
     }
 
     const video = videoRef.current;
-    const maxLoops = video && Number.isFinite(video.duration) && video.duration < 60 ? 2 : 1;
+    const threshold = autoAdvanceSettings.videoThreshold || 30;
+    const maxLoops = video && Number.isFinite(video.duration) && video.duration < threshold ? (autoAdvanceSettings.videoLoops || 2) : 1;
     const nextLoopCount = videoLoops + 1;
 
     if (nextLoopCount < maxLoops) {
@@ -313,7 +332,7 @@ export function FileViewerModal({
     }
 
     const target = event.target;
-    if (!(target instanceof HTMLElement) || target.closest("img, video, a")) {
+    if (!(target instanceof HTMLElement) || target.closest("img, video, a, .explorer-video-player__controls")) {
       return;
     }
 
@@ -350,12 +369,7 @@ export function FileViewerModal({
   }
 
   function handleTouchStart(event: TouchEvent<HTMLElement>) {
-    if (event.target instanceof HTMLElement && event.target.closest("video")) {
-      return;
-    }
-
     event.stopPropagation();
-    revealViewerChrome();
 
     if (interactionLocked) {
       clearGestureState();
@@ -395,10 +409,6 @@ export function FileViewerModal({
   }
 
   function handleTouchMove(event: TouchEvent<HTMLElement>) {
-    if (event.target instanceof HTMLElement && event.target.closest("video")) {
-      return;
-    }
-
     if (interactionLocked) {
       event.stopPropagation();
       event.preventDefault();
@@ -464,10 +474,6 @@ export function FileViewerModal({
   }
 
   function handleTouchEnd(event: TouchEvent<HTMLElement>) {
-    if (event.target instanceof HTMLElement && event.target.closest("video")) {
-      return;
-    }
-
     if (pinchStartDistance.current) {
       pinchStartDistance.current = null;
       pinchStartScale.current = zoomScale;
@@ -679,7 +685,6 @@ export function FileViewerModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.18 }}
-      onPointerDownCapture={revealViewerChrome}
       style={{
         transform: `translate3d(0, ${viewerOffsetY}px, 0)`,
         transition: swipeState === "close" || swipeState === "reset" ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)" : "none"
@@ -760,6 +765,7 @@ export function FileViewerModal({
           {isImage ? <img alt="" src={file.url} /> : null}
           {isVideo ? (
             <VideoPlayer
+              videoRef={videoRef}
               src={file.url}
               autoPlay
               loop={loopEnabled && !autoEnabled}
@@ -772,6 +778,10 @@ export function FileViewerModal({
               onControlsLeave={() => {
                 scheduleChromeHide();
               }}
+              isRotated={isRotated}
+              onRotateToggle={() => setIsRotated(!isRotated)}
+              isMobile={isMobileView}
+              controlsOffset={isRotated ? 10 : 60} 
             />
           ) : null}
           {!isImage && !isVideo ? <a href={file.url}>Open file</a> : null}
@@ -855,7 +865,6 @@ export function FileViewerModal({
               type="button"
               onClick={handleAutoToggle}
               title="Auto advance"
-              disabled={loopEnabled}
             >
               {autoEnabled ? <FiPauseCircle aria-hidden /> : <FiPlayCircle aria-hidden />} <span>Auto {autoEnabled ? "ON" : "OFF"}</span>
             </button>
@@ -878,7 +887,6 @@ export function FileViewerModal({
                 type="button"
                 onClick={handleLoopToggle}
                 title="Loop video"
-                disabled={autoEnabled}
               >
                 <FiRefreshCw aria-hidden /> <span>Loop {loopEnabled ? "ON" : "OFF"}</span>
               </button>
@@ -921,19 +929,28 @@ export function FileViewerModal({
       <nav
         className={`explorer-viewer__mobile-actions ${viewerChromeVisible ? "is-visible" : "is-hidden"}`}
         aria-label="Viewer actions"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)" }}
+        style={{ 
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)",
+          display: "flex",
+          flexDirection: "row",
+          flexWrap: "nowrap",
+          justifyContent: "space-evenly"
+        }}
       >
-        <button type="button" onClick={onRandom}>
-          <FaDice aria-hidden /> <span>Random</span>
+        <button type="button" onClick={onRandom} title="Random">
+          <FaDice aria-hidden />
         </button>
-        <button aria-pressed={autoEnabled} type="button" onClick={onAutoToggle}>
-          <FiZap aria-hidden /> <span>Auto</span>
+        <button aria-pressed={autoEnabled} type="button" onClick={handleAutoToggle} title="Auto">
+          <FiZap aria-hidden />
         </button>
-        <button aria-pressed={shuffleEnabled} type="button" onClick={onShuffle}>
-          <FiShuffle aria-hidden /> <span>Shuffle</span>
+        <button aria-pressed={interactionLocked} type="button" onClick={toggleInteractionLock} title="Lock">
+          <FiLock aria-hidden />
         </button>
-        <button aria-pressed={interactionLocked} type="button" onClick={toggleInteractionLock}>
-          <FiLock aria-hidden /> <span>Lock</span>
+        <button aria-pressed={loopEnabled} type="button" onClick={handleLoopToggle} title="Loop" disabled={!isVideo}>
+          <FiRefreshCw aria-hidden />
+        </button>
+        <button aria-pressed={shuffleEnabled} type="button" onClick={onShuffle} title="Shuffle">
+          <FiShuffle aria-hidden />
         </button>
       </nav>
     </motion.div>

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { FiArrowLeft, FiDatabase, FiImage, FiLogOut, FiRefreshCw, FiSettings, FiTrash2 } from "react-icons/fi";
+import { useEffect, useState, useCallback } from "react";
+import { FiArrowLeft, FiDatabase, FiImage, FiLogOut, FiRefreshCw, FiSettings, FiTrash2, FiZap } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import SignIn from "../components/SignIn";
 import { apiClient } from "../shared/apiClient";
@@ -17,11 +17,37 @@ const actionLabels: Record<SettingsAction, string> = {
   "regenerate-thumbnails": "Delete all thumbnails and regenerate"
 };
 
+const DEFAULT_AUTO_ADVANCE_SETTINGS = {
+  imageDuration: 10,
+  videoThreshold: 30,
+  videoLoops: 2
+};
+
 export function ExplorerSettings() {
   const adminSession = useAdminSession();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [status, setStatus] = useState("");
+  const [autoAdvanceSettings, setAutoAdvanceSettings] = useState(() => {
+    try {
+      const saved = localStorage.getItem("explorer.autoAdvanceSettings");
+      if (saved) return JSON.parse(saved);
+    } catch {
+      /* ignore */
+    }
+    return DEFAULT_AUTO_ADVANCE_SETTINGS;
+  });
+
+  const updateAutoAdvance = useCallback((key: string, value: number) => {
+    const next = { ...autoAdvanceSettings, [key]: value };
+    setAutoAdvanceSettings(next);
+    localStorage.setItem("explorer.autoAdvanceSettings", JSON.stringify(next));
+  }, [autoAdvanceSettings]);
+
+  const resetAutoAdvance = useCallback(() => {
+    setAutoAdvanceSettings(DEFAULT_AUTO_ADVANCE_SETTINGS);
+    localStorage.setItem("explorer.autoAdvanceSettings", JSON.stringify(DEFAULT_AUTO_ADVANCE_SETTINGS));
+  }, []);
 
   useEffect(() => {
     setDocumentTitle("Explorer Settings");
@@ -127,6 +153,59 @@ export function ExplorerSettings() {
             <FiRefreshCw aria-hidden />
             <span>Delete all thumbnails and regenerate</span>
           </button>
+        </div>
+
+        <div className="explorer-settings__section dashboard-form">
+          <div>
+            <p className="dashboard-eyebrow">Timing & Loop</p>
+            <h3>Auto-Advance Settings</h3>
+          </div>
+          <p className="dashboard-note">Adjust the timing and behavior of the viewer when auto-advance is enabled.</p>
+
+          <div style={{ marginBottom: "1.25rem" }}>
+            <button className="dashboard-action" type="button" onClick={resetAutoAdvance}>
+              <FiRefreshCw aria-hidden /> Reset to Defaults
+            </button>
+          </div>
+
+          <div className="field-row">
+            <label>
+              <span>Image Duration (seconds)</span>
+              <input 
+                type="number" 
+                min={1}
+                value={autoAdvanceSettings.imageDuration}
+                onChange={e => {
+                  const val = parseInt(e.target.value);
+                  if (!isNaN(val)) updateAutoAdvance('imageDuration', val);
+                }} 
+              />
+            </label>
+            <label>
+              <span>Short Video Threshold (seconds)</span>
+              <input 
+                type="number" 
+                min={1}
+                value={autoAdvanceSettings.videoThreshold}
+                onChange={e => {
+                  const val = parseInt(e.target.value);
+                  if (!isNaN(val)) updateAutoAdvance('videoThreshold', val);
+                }} 
+              />
+            </label>
+            <label>
+              <span>Short Video Loops</span>
+              <input 
+                type="number" 
+                min={1}
+                value={autoAdvanceSettings.videoLoops}
+                onChange={e => {
+                  const val = parseInt(e.target.value);
+                  if (!isNaN(val)) updateAutoAdvance('videoLoops', val);
+                }} 
+              />
+            </label>
+          </div>
         </div>
 
         {status ? <p className="explorer-settings__status" role="status">{status}</p> : null}

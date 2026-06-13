@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiPlay, FiPause, FiMaximize2, FiVolume2, FiVolumeX } from "react-icons/fi";
+import { FiPlay, FiPause, FiMaximize2, FiVolume2, FiVolumeX, FiRotateCw } from "react-icons/fi";
 
 type VideoPlayerProps = {
   src: string;
@@ -11,6 +11,11 @@ type VideoPlayerProps = {
   showControls?: boolean;
   onControlsEnter?: () => void;
   onControlsLeave?: () => void;
+  isRotated?: boolean;
+  onRotateToggle?: () => void;
+  isMobile?: boolean;
+  controlsOffset?: number;
+  videoRef?: RefObject<HTMLVideoElement | null>;
 };
 
 function formatTime(sec = 0) {
@@ -24,8 +29,9 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false, onEnded, showControls = true, onControlsEnter, onControlsLeave }: VideoPlayerProps) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false, onEnded, showControls = true, onControlsEnter, onControlsLeave, isRotated, onRotateToggle, isMobile, controlsOffset, videoRef: externalVideoRef }: VideoPlayerProps) {
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const videoRef = externalVideoRef || localVideoRef;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const prevVolumeRef = useRef<number | null>(null);
@@ -39,12 +45,21 @@ export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false,
     const vid = videoRef.current;
     if (!vid) return;
 
-    const onLoaded = () => {
-      setDuration(vid.duration || 0);
-      if (autoPlay) {
-        void vid.play().then(() => setPlaying(!vid.paused)).catch(() => {});
+    const tryPlay = async () => {
+      try {
+        if (vid.paused) await vid.play();
+        setPlaying(true);
+      } catch {
+        setPlaying(false);
       }
     };
+
+    const onLoaded = () => {
+      setDuration(vid.duration || 0);
+      if (autoPlay) void tryPlay();
+    };
+
+    if (vid.readyState >= 2) onLoaded();
 
     const onEndedHandler = () => {
       setPlaying(false);
@@ -215,8 +230,24 @@ export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false,
     <div
       className="explorer-video-player"
       ref={containerRef}
-      onPointerDown={(e) => e.stopPropagation()}
-      onClick={(e) => e.stopPropagation()}
+      style={
+        isRotated
+          ? {
+              position: "fixed",
+              top: "50%",
+              left: "50%",
+              width: "100dvh",
+              height: "100dvw",
+              transform: "translate(-50%, -50%) rotate(90deg)",
+              maxWidth: "none",
+              maxHeight: "none",
+              display: "flex",
+              flexDirection: "column",
+              zIndex: 100,
+              borderRadius: 0,
+            }
+          : { height: "100%", width: "100%" }
+      }
     >
       <video
         ref={videoRef}
@@ -225,6 +256,13 @@ export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false,
         playsInline
         autoPlay={autoPlay}
         loop={loop}
+        style={{
+          width: '100%',
+          height: '100%',
+          maxHeight: 'none',
+          maxWidth: 'none',
+          objectFit: 'contain'
+        }}
       />
 
       <AnimatePresence>
@@ -235,6 +273,19 @@ export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false,
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.18 }}
+            style={isMobile ? {
+              bottom: `calc(env(safe-area-inset-bottom, 0px) + ${controlsOffset || 0}px)`,
+              left: isRotated ? "50%" : 0,
+              x: isRotated ? "-50%" : 0,
+              width: isRotated ? "92%" : "100%",
+              maxWidth: isRotated ? "600px" : "none",
+              borderRadius: isRotated ? "12px" : 0,
+            } : {}}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
             onPointerEnter={(e) => {
               e.stopPropagation();
               onControlsEnter?.();
@@ -297,9 +348,15 @@ export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false,
               />
             </div>
 
-            <button className="explorer-video-player__fullscreen" onClick={toggleFullscreen} aria-label="Fullscreen">
-              <FiMaximize2 />
-            </button>
+            {isMobile && onRotateToggle ? (
+              <button className="explorer-video-player__rotate" onClick={onRotateToggle} aria-label="Rotate">
+                <FiRotateCw />
+              </button>
+            ) : (
+              <button className="explorer-video-player__fullscreen" onClick={toggleFullscreen} aria-label="Fullscreen">
+                <FiMaximize2 />
+              </button>
+            )}
           </motion.div>
         ) : null}
       </AnimatePresence>

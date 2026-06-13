@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { FiCheck, FiFileText, FiImage, FiVideo } from "react-icons/fi";
+import { FiCheck, FiFileText, FiImage, FiPlay, FiVideo } from "react-icons/fi";
 import { mediaThumbnailUrl, type ExplorerFile } from "./types";
 
 type FileCardProps = {
@@ -54,6 +54,31 @@ export function FileCard({ file, isSelected = false, isSelectionMode = false, vi
     >
       <button className="explorer-file-card__preview" type="button" onClick={handlePress} aria-label={isSelectionMode ? `Select ${file.name}` : `Open ${file.name}`}>
         {thumbnailUrl && !thumbnailFailed ? <img alt="" loading="lazy" decoding="async" src={thumbnailUrl} onError={() => setThumbnailFailed(true)} /> : <Icon aria-hidden />}
+        {!isList && isVideo && (
+          <span 
+            className="explorer-file-card__video-play" 
+            aria-hidden 
+            style={{ 
+              position: "absolute", 
+              top: "0.5rem", 
+              left: "0.5rem", 
+              zIndex: 1, 
+              pointerEvents: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "28px",
+              height: "28px",
+              backgroundColor: "rgba(0, 0, 0, 0.4)",
+              backdropFilter: "blur(4px)",
+              color: "white",
+              borderRadius: "4px",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.3)"
+            }}
+          >
+            <FiPlay size={16} style={{ transform: "translateX(1px)" }} />
+          </span>
+        )}
         {isSelectionMode ? (
           <span className="explorer-file-card__check" aria-hidden>
             {isSelected ? <FiCheck /> : null}

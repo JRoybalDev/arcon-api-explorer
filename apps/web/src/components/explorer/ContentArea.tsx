@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type TouchEvent } from "react";
-import { FiArrowLeft, FiCheck, FiCheckCircle, FiChevronRight, FiFolder, FiFolderPlus, FiHelpCircle, FiHome, FiMoreVertical, FiMove, FiSettings, FiTrash2, FiUpload, FiX } from "react-icons/fi";
+import { motion } from "framer-motion";
+import { FiArrowLeft, FiCheck, FiCheckCircle, FiChevronRight, FiFolder, FiFolderPlus, FiHeart, FiHelpCircle, FiHome, FiMoreVertical, FiMove, FiSettings, FiTrash2, FiUpload, FiX } from "react-icons/fi";
 import { FileCard } from "./FileCard";
 import { FileViewerModal } from "./FileViewerModal";
 import { FiltersSearch } from "./FiltersSearch";
 import { FolderCard } from "./FolderCard";
-import type { ExplorerFile, ExplorerFilter, ExplorerFolder, ExplorerSort, ExplorerView } from "./types";
+import { mediaThumbnailUrl, type ExplorerFile, type ExplorerFilter, type ExplorerFolder, type ExplorerSort, type ExplorerView } from "./types";
 
 type ContentAreaProps = {
   activeFolder: ExplorerFolder | null;
@@ -47,6 +48,11 @@ type ContentAreaProps = {
   onUploadOpen: () => void;
   onViewChange: (view: ExplorerView) => void;
   onViewerNavigateByOffset: (offset: number) => void;
+  autoAdvanceSettings: {
+    imageDuration: number;
+    videoThreshold: number;
+    videoLoops: number;
+  };
 };
 
 export function ContentArea({
@@ -89,13 +95,15 @@ export function ContentArea({
   onSortChange,
   onUploadOpen,
   onViewChange,
-  onViewerNavigateByOffset
+  onViewerNavigateByOffset,
+  autoAdvanceSettings
 }: ContentAreaProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
   const [bulkDialog, setBulkDialog] = useState<"move" | "delete" | null>(null);
   const [moveFolderId, setMoveFolderId] = useState<string | null>(activeFolder?.id ?? null);
+  const [isFavoritesView, setIsFavoritesView] = useState(false);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [folderName, setFolderName] = useState("");
   const fileGridRef = useRef<HTMLDivElement>(null);
@@ -105,6 +113,20 @@ export function ContentArea({
   const touchStartY = useRef<number | null>(null);
   const selectedCount = selectedFileIds.length;
   const moveFolderName = moveFolderId ? allFolders.find((folder) => folder.id === moveFolderId)?.name ?? "Selected folder" : "All Media";
+  const displayedFiles = isFavoritesView ? files.filter(f => f.favorite) : files;
+
+  const [favoritesThumbFailed, setFavoritesThumbFailed] = useState(false);
+  const favoritesCoverUrl = useMemo(() => {
+    const favoritedFiles = files.filter((f) => f.favorite);
+    if (favoritedFiles.length === 0) return null;
+
+    const mostRecent = favoritedFiles.reduce((latest, current) => {
+      return new Date(current.createdAt).getTime() > new Date(latest.createdAt).getTime() ? current : latest;
+    }, favoritedFiles[0]!);
+
+    return mediaThumbnailUrl(mostRecent);
+  }, [files]);
+
   const breadcrumbFolders = useMemo(() => {
     if (!activeFolder) {
       return [];
@@ -122,6 +144,10 @@ export function ContentArea({
     return trail;
   }, [activeFolder, allFolders]);
   const folderTree = useMemo(() => buildFolderTree(allFolders), [allFolders]);
+
+  useEffect(() => {
+    setFavoritesThumbFailed(false);
+  }, [favoritesCoverUrl]);
 
   useEffect(() => {
     if (!menuOpen) {
@@ -143,6 +169,10 @@ export function ContentArea({
   useEffect(() => {
     setSelectedFileIds((current) => current.filter((fileId) => files.some((file) => file.id === fileId)));
   }, [files]);
+
+  useEffect(() => {
+    setIsFavoritesView(false);
+  }, [activeFolder?.id, searchQuery, filter, sort]);
 
   useEffect(() => {
     setMoveFolderId(activeFolder?.id ?? null);
@@ -284,31 +314,56 @@ export function ContentArea({
     touchStartY.current = null;
 
     if (deltaX > 70 && deltaY < 55) {
-      onFolderBack();
+      if (isFavoritesView) {
+        setIsFavoritesView(false);
+      } else {
+        onFolderBack();
+      }
     }
   }
+
+  const handleBack = () => {
+    if (isFavoritesView) {
+      setIsFavoritesView(false);
+    } else {
+      onFolderBack();
+    }
+  };
+
+  const handleFolderOpen = (folderId: string | null) => {
+    setIsFavoritesView(false);
+    onFolderOpen(folderId);
+  };
 
   return (
     <section className="explorer-content" aria-label="Media explorer" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <header className="explorer-topbar">
         <div className="explorer-breadcrumb">
-          <button className="explorer-back-button" type="button" onClick={onFolderBack} aria-label="Go up one folder">
+          <button className="explorer-back-button" type="button" onClick={handleBack} aria-label="Go up one folder">
             <FiArrowLeft aria-hidden />
           </button>
-          <strong className="explorer-breadcrumb__mobile-title">{activeFolder?.name ?? "All Media"}</strong>
+          <strong className="explorer-breadcrumb__mobile-title">{isFavoritesView ? "Favorites" : (activeFolder?.name ?? "All Media")}</strong>
           <nav className="explorer-breadcrumb__trail" aria-label="Current folder">
-            <button type="button" onClick={() => onFolderOpen(null)}>
+            <button type="button" onClick={() => handleFolderOpen(null)}>
               <FiHome aria-hidden />
               Home
             </button>
             {breadcrumbFolders.map((folder) => (
               <span className="explorer-breadcrumb__segment" key={folder.id}>
                 <FiChevronRight aria-hidden />
-                <button type="button" onClick={() => onFolderOpen(folder.id)} aria-current={folder.id === activeFolder?.id ? "page" : undefined}>
+                <button type="button" onClick={() => handleFolderOpen(folder.id)} aria-current={!isFavoritesView && folder.id === activeFolder?.id ? "page" : undefined}>
                   {folder.name}
                 </button>
               </span>
             ))}
+            {isFavoritesView && (
+              <span className="explorer-breadcrumb__segment">
+                <FiChevronRight aria-hidden />
+                <button type="button" className="active" aria-current="page">
+                  Favorites
+                </button>
+              </span>
+            )}
           </nav>
         </div>
         <div className="explorer-topbar__actions">
@@ -449,14 +504,52 @@ export function ContentArea({
           </section>
         ) : (
           <>
-            {folders.length > 0 ? (
+            {!isFavoritesView && (folders.length > 0 || favoriteIds.length > 0) ? (
               <section className="explorer-section" aria-labelledby="explorer-folders-heading">
                 <div className="explorer-section__label" id="explorer-folders-heading">
-                  Folders <span>{folders.length}</span>
+                  Folders <span>{folders.length + (favoriteIds.length > 0 ? 1 : 0)}</span>
                 </div>
                 <div className={`explorer-folder-grid explorer-folder-grid--${view}`}>
+                  {favoriteIds.length > 0 && (
+                    <motion.button
+                      className={`explorer-folder-card explorer-folder-card--favorites${favoritesCoverUrl && !favoritesThumbFailed ? "" : " explorer-folder-card--empty"}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      whileHover={{ y: -3, scale: 1.01 }}
+                      whileTap={{ scale: 0.985 }}
+                      type="button"
+                      onClick={() => setIsFavoritesView(true)}
+                    >
+                      {favoritesCoverUrl && !favoritesThumbFailed ? (
+                        <>
+                          <img alt="" loading="lazy" decoding="async" src={favoritesCoverUrl} onError={() => setFavoritesThumbFailed(true)} />
+                          <span
+                            aria-hidden
+                            style={{
+                              position: "absolute",
+                              top: "50%",
+                              left: "50%",
+                              transform: "translate(-50%, -50%)",
+                              zIndex: 1,
+                              pointerEvents: "none",
+                              color: "white",
+                              opacity: 0.6
+                            }}
+                          >
+                            <FiHeart size={48} fill="currentColor" />
+                          </span>
+                        </>
+                      ) : (
+                        <span className="explorer-folder-card__placeholder" aria-hidden><FiFolder /></span>
+                      )}
+                      <span className="explorer-folder-card__count">
+                        <span className="explorer-folder-card__count-text">{favoriteIds.length} items</span>
+                      </span>
+                      <strong>Favorites</strong>
+                    </motion.button>
+                  )}
                   {folders.map((folder) => (
-                    <FolderCard folder={folder} key={folder.id} onOpen={onFolderOpen} filter={filter} sort={sort} />
+                    <FolderCard folder={folder} key={folder.id} onOpen={handleFolderOpen} filter={filter} sort={sort} />
                   ))}
                 </div>
               </section>
@@ -464,9 +557,9 @@ export function ContentArea({
 
             <section className="explorer-section" aria-labelledby="explorer-files-heading">
               <div className="explorer-section__label" id="explorer-files-heading">
-                Files <span>{totalFiles ?? files.length}</span>
+                Files <span>{isFavoritesView ? displayedFiles.length : (totalFiles ?? files.length)}</span>
               </div>
-              {!isLoadingFiles && files.length === 0 ? <p className="explorer-empty">No files match this view.</p> : null}
+              {!isLoadingFiles && displayedFiles.length === 0 ? <p className="explorer-empty">No files match this view.</p> : null}
               {view === "list" && files.length > 0 ? (
                 <div className="explorer-list-head" aria-hidden>
                   <span>Name</span>
@@ -476,7 +569,7 @@ export function ContentArea({
                 </div>
               ) : null}
               <div className={`explorer-file-grid explorer-file-grid--${view}`} ref={fileGridRef}>
-                {files.map((file) => (
+                {displayedFiles.map((file) => (
                   <FileCard
                     file={file}
                     isSelected={selectedFileIds.includes(file.id)}
@@ -490,8 +583,13 @@ export function ContentArea({
               </div>
               {canLoadMoreFiles ? (
                 <div className="explorer-infinite-loader" ref={infiniteLoaderRef} role="status" aria-live="polite">
-                  <span aria-hidden />
-                  {isLoadingMoreFiles ? "Loading more..." : "Scroll for more"}
+                  {isLoadingMoreFiles ? (
+                    <svg className="explorer-infinite-loader__spinner" width="24" height="24" viewBox="0 0 50 50" aria-hidden>
+                      <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeDasharray="31.4 31.4">
+                        <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite" />
+                      </circle>
+                    </svg>
+                  ) : null}
                 </div>
               ) : null}
             </section>
@@ -591,7 +689,7 @@ export function ContentArea({
           autoEnabled={autoEnabled}
           favoriteIds={favoriteIds}
           file={selectedFile}
-          files={files}
+          files={displayedFiles}
           fileIndex={selectedFileIndex}
           loopEnabled={loopEnabled}
           shuffleEnabled={shuffleEnabled}
@@ -604,6 +702,7 @@ export function ContentArea({
           onNavigateByOffset={onViewerNavigateByOffset}
           onRandom={onRandomFile}
           onShuffle={onShuffleFiles}
+          autoAdvanceSettings={autoAdvanceSettings}
         />
       ) : null}
     </section>
