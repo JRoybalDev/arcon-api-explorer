@@ -1,5 +1,5 @@
 import { type MouseEvent, type RefObject, type TouchEvent, useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { FiArrowLeft, FiCopy, FiDownload, FiHeart, FiImage, FiLock, FiMaximize2, FiMoreVertical, FiPauseCircle, FiPlayCircle, FiPlus, FiRefreshCw, FiRepeat, FiRotateCw, FiShuffle, FiSkipBack, FiSkipForward, FiTrash2, FiVideo, FiX, FiZap } from "react-icons/fi";
 import { FaDice, FaHeart } from "react-icons/fa";
 import { mediaThumbnailUrl, type ExplorerFile } from "./types";
@@ -71,6 +71,7 @@ export function FileViewerModal({
   const [swipeState, setSwipeState] = useState<SwipeState>(null);
   const [tagDraft, setTagDraft] = useState("");
   const [tagEditorOpen, setTagEditorOpen] = useState(false);
+  const [showCopiedToast, setShowCopiedToast] = useState(false);
   const [videoLoops, setVideoLoops] = useState(0);
   const [zoomScale, setZoomScale] = useState(1);
   const [isMobileView, setIsMobileView] = useState(false);
@@ -120,6 +121,7 @@ export function FileViewerModal({
     setTagDraft("");
     setTagEditorOpen(false);
     setZoomScale(1);
+    setShowCopiedToast(false);
     setIsRotated(false);
   }, [file.id, autoEnabled]);
 
@@ -287,7 +289,14 @@ export function FileViewerModal({
       ? (file.previewUrl || file.url)
       : file.url;
 
-    await navigator.clipboard.writeText(publicUrl);
+    // Construct the absolute URL by prefixing relative content paths with the current origin
+    const absoluteUrl = publicUrl.startsWith("http")
+      ? publicUrl
+      : `${window.location.origin}${publicUrl}`;
+
+    await navigator.clipboard.writeText(absoluteUrl);
+    setShowCopiedToast(true);
+    setTimeout(() => setShowCopiedToast(false), 2000);
   }
 
   async function enterFullscreen(targetRef: RefObject<HTMLElement | null>) {
@@ -924,8 +933,39 @@ export function FileViewerModal({
           </div>
 
           <div className="explorer-viewer__controls-row">
-            <button className="explorer-viewer__control-link" type="button" onClick={() => void copyUrl()} title="Copy URL">
+            <button 
+              className="explorer-viewer__control-link" 
+              type="button" 
+              onClick={() => void copyUrl()} 
+              title="Copy URL"
+              style={{ position: "relative" }}
+            >
               <FiCopy aria-hidden /> <span>Copy URL</span>
+              <AnimatePresence>
+                {showCopiedToast && (
+                  <motion.span
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: -32 }}
+                    exit={{ opacity: 0 }}
+                    style={{
+                      position: "absolute",
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      background: "#3b82f6",
+                      color: "white",
+                      padding: "2px 8px",
+                      borderRadius: "4px",
+                      fontSize: "11px",
+                      fontWeight: "bold",
+                      whiteSpace: "nowrap",
+                      pointerEvents: "none",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
+                    }}
+                  >
+                    Copied!
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </button>
           </div>
         </div>

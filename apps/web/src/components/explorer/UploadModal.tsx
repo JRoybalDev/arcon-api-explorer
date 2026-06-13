@@ -233,7 +233,7 @@ export function UploadModal({ currentFolderId, folders, isUploading, progress, o
           ) : null}
 
           {activeTab === "files" ? (
-            <label className="explorer-upload-dropzone" onDragOver={(event) => event.preventDefault()} onDrop={dropFiles}>
+            <label className="explorer-upload-dropzone" onDragOver={(event) => event.preventDefault()} onDrop={dropFiles} style={{ width: "100%", overflow: "hidden" }}>
               <input multiple type="file" accept="image/*,video/*" onChange={chooseFiles} />
               <span>
                 <FiUpload aria-hidden />
