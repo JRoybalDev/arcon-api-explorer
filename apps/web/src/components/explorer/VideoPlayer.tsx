@@ -18,6 +18,10 @@ function formatTime(sec = 0) {
   return `${m}:${r.toString().padStart(2, "0")}`;
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
 export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false, onEnded, showControls = true }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
