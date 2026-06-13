@@ -837,7 +837,7 @@ export function FileViewerModal({
               isRotated={isRotated}
               onRotateToggle={() => setIsRotated(!isRotated)}
               isMobile={isMobileView}
-              controlsOffset={isRotated ? 10 : 60} 
+              controlsOffset={isRotated ? 10 : 40} 
             />
           ) : null}
           {!isImage && !isVideo ? <a href={file.url}>Open file</a> : null}
