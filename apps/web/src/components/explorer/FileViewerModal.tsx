@@ -766,6 +766,12 @@ export function FileViewerModal({
               muted={false}
               onEnded={handleVideoEnded}
               showControls={viewerChromeVisible}
+              onControlsEnter={() => {
+                revealViewerChrome();
+              }}
+              onControlsLeave={() => {
+                scheduleChromeHide();
+              }}
             />
           ) : null}
           {!isImage && !isVideo ? <a href={file.url}>Open file</a> : null}

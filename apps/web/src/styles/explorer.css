@@ -1487,34 +1487,114 @@
 /* Video player styles */
 .explorer-video-player {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* size the container to the rendered media so controls match width */
+  display: inline-block;
+  max-width: min(74vw, 900px);
   width: 100%;
+  overflow: hidden;  
+  border-radius: 7px;
 }
 
 .explorer-video-player__video {
   border-radius: 7px;
   max-height: calc(100vh - 32px);
-  max-width: min(74vw, 900px);
+  max-width: 100%;
   object-fit: contain;
+  display: block;
   width: 100%;
+}
+
+/* Ensure the video element fills the fullscreen viewport and remains contained */
+.explorer-video-player__video:fullscreen,
+.explorer-video-player__video:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  object-fit: contain;
+  border-radius: 0;
 }
 
 .explorer-video-player__controls {
   align-items: center;
-  background: linear-gradient(180deg, rgba(0,0,0,0.0), rgba(0,0,0,0.42));
+  /* slightly less transparent for better legibility */
+  background: rgba(14,10,8,0.62);
   backdrop-filter: blur(6px);
-  border-radius: 10px;
   display: flex;
   gap: 12px;
-  padding: 8px 12px;
+  padding: 10px 14px;
   position: absolute;
-  bottom: 18px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(920px, calc(100% - 48px));
+  /* positioned above the safe-area/footer so it sits above any overlay footer;
+     reduced gap to sit closer to the media bottom */
+  bottom: 0;
+  left: 0;
+  width: 100%;
   z-index: 4;
+}
+
+.explorer-video-player__volume {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+
+.explorer-video-player__volume input[type="range"] {
+  position: static;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;                          
+  min-width: 0;
+  transition: opacity 160ms ease, width 160ms ease;
+  overflow: hidden;
+}
+
+.explorer-video-player__volume:hover input[type="range"],
+.explorer-video-player__volume:focus-within input[type="range"] {
+  opacity: 1;
+  pointer-events: auto;
+  width: clamp(64px, 10vw, 160px);
+}
+
+/* Range styling for visibility */
+.explorer-video-player__volume input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+}
+
+.explorer-video-player__volume input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 14px;
+  width: 14px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--explorer-accent-strong);
+  box-shadow: 0 0 0 6px rgba(185,130,85,0.06);
+}
+
+.explorer-video-player__volume input[type="range"]::-moz-range-track {
+  height: 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+}
+
+.explorer-video-player__volume input[type="range"]::-moz-range-thumb {
+  height: 14px;
+  width: 14px;
+  border-radius: 50%;
+  background: var(--explorer-accent-strong);
+  border: none;
+}
+
+.explorer-video-player__volume-icon {
+  background: transparent;
+  border: none;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
 }
 
 .explorer-video-player__controls button {
@@ -1548,8 +1628,7 @@
   flex: 1 1 auto;
 }
 
-.explorer-video-player__progress input[type="range"],
-.explorer-video-player__volume input[type="range"] {
+.explorer-video-player__progress input[type="range"] {
   width: 100%;
   -webkit-appearance: none;
   background: transparent;
@@ -1569,13 +1648,6 @@
   border-radius: 50%;
   background: var(--explorer-accent-strong);
   box-shadow: 0 2px 6px rgba(0,0,0,0.6);
-}
-
-.explorer-video-player__volume {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 160px;
 }
 
 .explorer-video-player__volume svg { color: var(--explorer-muted); }
@@ -1637,6 +1709,29 @@
   max-width: 100vw;
   object-fit: contain;
   width: 100%;
+}
+
+/* Mobile: make the viewer media take full available width */
+@media (max-width: 760px) {
+  .explorer-viewer__stage {
+    padding: 0;
+  }
+
+  .explorer-viewer__stage img,
+  .explorer-viewer__stage video {
+    max-width: 100vw;
+    max-height: calc(100vh - 160px);
+    width: 100vw;
+    object-fit: contain;
+  }
+
+  .explorer-video-player {
+    display: block;
+    max-width: 100vw;
+    width: 100vw;
+    margin: 0;
+    border-radius: 0;
+  }
 }
 
 .explorer-viewer__stage a {

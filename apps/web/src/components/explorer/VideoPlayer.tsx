@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiPlay, FiPause, FiMaximize2, FiVolume2 } from "react-icons/fi";
+import { FiPlay, FiPause, FiMaximize2, FiVolume2, FiVolumeX } from "react-icons/fi";
 
 type VideoPlayerProps = {
   src: string;
@@ -9,6 +9,8 @@ type VideoPlayerProps = {
   muted?: boolean;
   onEnded?: () => void;
   showControls?: boolean;
+  onControlsEnter?: () => void;
+  onControlsLeave?: () => void;
 };
 
 function formatTime(sec = 0) {
@@ -22,7 +24,7 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false, onEnded, showControls = true }: VideoPlayerProps) {
+export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false, onEnded, showControls = true, onControlsEnter, onControlsLeave }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -122,15 +124,29 @@ export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false,
   }
 
   function toggleFullscreen() {
-    const el = containerRef.current;
+    const vid = videoRef.current;
+    const el = vid ?? containerRef.current;
     if (!el) return;
     if (document.fullscreenElement) {
       void document.exitFullscreen();
       setIsFullscreen(false);
     } else {
-      void el.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+      // Request fullscreen on the actual video element when available so the media
+      // scales to fill the screen correctly.
+      void (vid ? vid.requestFullscreen() : el.requestFullscreen())
+        .then(() => setIsFullscreen(true))
+        .catch(() => {});
     }
   }
+
+  useEffect(() => {
+    function onFullScreenChange() {
+      setIsFullscreen(!!document.fullscreenElement);
+    }
+
+    document.addEventListener("fullscreenchange", onFullScreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullScreenChange);
+  }, []);
 
   // Keyboard shortcuts: space/k play-pause, arrows seek, up/down volume, f fullscreen, m mute
   useEffect(() => {
@@ -196,7 +212,12 @@ export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false,
   }, [volume]);
 
   return (
-    <div className="explorer-video-player" ref={containerRef}>
+    <div
+      className="explorer-video-player"
+      ref={containerRef}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+    >
       <video
         ref={videoRef}
         src={src}
@@ -214,6 +235,14 @@ export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false,
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.18 }}
+            onPointerEnter={(e) => {
+              e.stopPropagation();
+              onControlsEnter?.();
+            }}
+            onPointerLeave={(e) => {
+              e.stopPropagation();
+              onControlsLeave?.();
+            }}
           >
             <button className="explorer-video-player__play" onClick={togglePlay} aria-label={playing ? "Pause" : "Play"}>
               {playing ? <FiPause /> : <FiPlay />}
@@ -235,9 +264,37 @@ export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false,
 
             <div className="explorer-video-player__time">-{formatTime(Math.max(0, duration - current))}</div>
 
-            <div className="explorer-video-player__volume">
-              <FiVolume2 />
-              <input type="range" min={0} max={1} step={0.01} value={volume} onChange={(e) => setVolume(Number(e.target.value))} aria-label="Volume" />
+            <div
+              className="explorer-video-player__volume"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <button
+                className="explorer-video-player__volume-icon"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (volume > 0.001) {
+                    prevVolumeRef.current = volume;
+                    setVolume(0);
+                  } else {
+                    setVolume(prevVolumeRef.current ?? 1);
+                    prevVolumeRef.current = null;
+                  }
+                }}
+                aria-label={volume > 0.001 ? "Mute" : "Unmute"}
+              >
+                {volume > 0.001 ? <FiVolume2 /> : <FiVolumeX />}
+              </button>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={volume}
+                onPointerDown={(e) => e.stopPropagation()}
+                onChange={(e) => setVolume(Number(e.target.value))}
+                aria-label="Volume"
+              />
             </div>
 
             <button className="explorer-video-player__fullscreen" onClick={toggleFullscreen} aria-label="Fullscreen">
