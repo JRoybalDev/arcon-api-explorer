@@ -280,7 +280,14 @@ export function FileViewerModal({
   }
 
   async function copyUrl() {
-    await navigator.clipboard.writeText(file.url);
+    // Prefer the public CDN preview URL for images when available so users
+    // can paste a stable external link into other applications. Fall back to
+    // the main `file.url` if no preview/public URL is present.
+    const publicUrl = file.contentType.startsWith("image/")
+      ? (file.previewUrl || file.url)
+      : file.url;
+
+    await navigator.clipboard.writeText(publicUrl);
   }
 
   async function enterFullscreen(targetRef: RefObject<HTMLElement | null>) {
@@ -690,6 +697,7 @@ export function FileViewerModal({
         transition: swipeState === "close" || swipeState === "reset" ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)" : "none"
       }}
     >
+      {isMobileView && (
       <header
         className={`explorer-viewer__mobile-header ${viewerChromeVisible || mobileMenuOpen ? "is-visible" : "is-hidden"}`}
         style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
@@ -720,6 +728,7 @@ export function FileViewerModal({
           </div>
         ) : null}
       </header>
+      )}
 
       <div className="explorer-viewer__counter">
         {Math.min(currentIndex + 1, totalFiles)} / {totalFiles}
@@ -926,6 +935,7 @@ export function FileViewerModal({
         </div>
       </motion.aside>
 
+      {isMobileView && (
       <nav
         className={`explorer-viewer__mobile-actions ${viewerChromeVisible ? "is-visible" : "is-hidden"}`}
         aria-label="Viewer actions"
@@ -953,6 +963,7 @@ export function FileViewerModal({
           <FiShuffle aria-hidden />
         </button>
       </nav>
+      )}
     </motion.div>
   );
 }

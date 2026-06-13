@@ -1701,6 +1701,20 @@
   z-index: 1;
 }
 
+/* Ensure images shown in the viewer scale to fill the available viewport
+   while preserving aspect ratio and not overflowing the screen. This keeps
+   images as large as possible without breaking layout or causing scroll. */
+.explorer-viewer__media-item img,
+.explorer-viewer__media-item video {
+  display: block;
+  margin: 0 auto;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
 .explorer-viewer__stage:fullscreen {
   background: #000;
   height: 100vh;

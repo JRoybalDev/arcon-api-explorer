@@ -246,7 +246,7 @@ export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false,
               zIndex: 100,
               borderRadius: 0,
             }
-          : { height: "100%", width: "100%" }
+          : { height: "100%", width: "100%", position: "relative" }
       }
     >
       <video
@@ -262,6 +262,30 @@ export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false,
           maxHeight: 'none',
           maxWidth: 'none',
           objectFit: 'contain'
+        }}
+      />
+
+      {/* Hover area: always present to detect pointer enter/leave even when controls are hidden */}
+      <div
+        className="explorer-video-player__controls-hover"
+        onPointerEnter={(e) => {
+          e.stopPropagation();
+          onControlsEnter?.();
+        }}
+        onPointerLeave={(e) => {
+          e.stopPropagation();
+          onControlsLeave?.();
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 56,
+          zIndex: 3,
+          background: 'transparent'
         }}
       />
 
