@@ -1484,6 +1484,103 @@
   object-fit: contain;
 }
 
+/* Video player styles */
+.explorer-video-player {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.explorer-video-player__video {
+  border-radius: 7px;
+  max-height: calc(100vh - 32px);
+  max-width: min(74vw, 900px);
+  object-fit: contain;
+  width: 100%;
+}
+
+.explorer-video-player__controls {
+  align-items: center;
+  background: linear-gradient(180deg, rgba(0,0,0,0.0), rgba(0,0,0,0.42));
+  backdrop-filter: blur(6px);
+  border-radius: 10px;
+  display: flex;
+  gap: 12px;
+  padding: 8px 12px;
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(920px, calc(100% - 48px));
+  z-index: 4;
+}
+
+.explorer-video-player__controls button {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.04);
+  color: var(--explorer-text);
+  height: 40px;
+  width: 40px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.explorer-video-player__play {
+  flex: 0 0 auto;
+}
+
+.explorer-video-player__fullscreen {
+  flex: 0 0 auto;
+}
+
+.explorer-video-player__time {
+  color: var(--explorer-muted);
+  font-size: 0.86rem;
+  min-width: 42px;
+  text-align: center;
+}
+
+.explorer-video-player__progress {
+  flex: 1 1 auto;
+}
+
+.explorer-video-player__progress input[type="range"],
+.explorer-video-player__volume input[type="range"] {
+  width: 100%;
+  -webkit-appearance: none;
+  background: transparent;
+}
+
+.explorer-video-player__progress input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 999px;
+}
+
+.explorer-video-player__progress input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 12px;
+  width: 12px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--explorer-accent-strong);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+}
+
+.explorer-video-player__volume {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 160px;
+}
+
+.explorer-video-player__volume svg { color: var(--explorer-muted); }
+
+
 .explorer-viewer__media-item,
 .explorer-viewer__media-peek {
   align-items: center;

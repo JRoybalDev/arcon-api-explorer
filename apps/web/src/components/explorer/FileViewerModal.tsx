@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { FiArrowLeft, FiCopy, FiDownload, FiHeart, FiImage, FiLock, FiMaximize2, FiMoreVertical, FiPauseCircle, FiPlayCircle, FiPlus, FiRefreshCw, FiShuffle, FiSkipBack, FiSkipForward, FiTrash2, FiVideo, FiX, FiZap } from "react-icons/fi";
 import { FaDice, FaHeart } from "react-icons/fa";
 import { mediaThumbnailUrl, type ExplorerFile } from "./types";
+import VideoPlayer from "./VideoPlayer";
 
 type FileViewerModalProps = {
   autoEnabled: boolean;
@@ -338,6 +339,16 @@ export function FileViewerModal({
     scheduleChromeHide();
   }
 
+  function toggleViewerChrome() {
+    setViewerChromeVisible((current) => {
+      const next = !current;
+      if (next) {
+        scheduleChromeHide();
+      }
+      return next;
+    });
+  }
+
   function handleTouchStart(event: TouchEvent<HTMLElement>) {
     if (event.target instanceof HTMLElement && event.target.closest("video")) {
       return;
@@ -489,7 +500,25 @@ export function FileViewerModal({
     touchStartY.current = null;
 
     if (isTap) {
-      handleStageTap();
+      // single tap toggles viewer chrome immediately; double-tap still toggles zoom
+      const now = Date.now();
+      const isDoubleTap = now - lastTapAt.current < 300;
+      lastTapAt.current = now;
+
+      if (isDoubleTap) {
+        const nextScale = zoomScale > 1.01 ? 1 : 2.4;
+
+        if (nextScale === 1) {
+          setPanOffset({ x: 0, y: 0 });
+          panStartOffset.current = { x: 0, y: 0 };
+        }
+
+        setZoomScale(nextScale);
+        return;
+      }
+
+      // single tap: toggle chrome visibility
+      toggleViewerChrome();
       return;
     }
 
@@ -730,14 +759,13 @@ export function FileViewerModal({
         >
           {isImage ? <img alt="" src={file.url} /> : null}
           {isVideo ? (
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              controls
-              loop={loopEnabled && !autoEnabled}
+            <VideoPlayer
               src={file.url}
+              autoPlay
+              loop={loopEnabled && !autoEnabled}
+              muted={false}
               onEnded={handleVideoEnded}
+              showControls={viewerChromeVisible}
             />
           ) : null}
           {!isImage && !isVideo ? <a href={file.url}>Open file</a> : null}
