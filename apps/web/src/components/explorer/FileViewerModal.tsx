@@ -294,9 +294,47 @@ export function FileViewerModal({
       ? publicUrl
       : `${window.location.origin}${publicUrl}`;
 
-    await navigator.clipboard.writeText(absoluteUrl);
-    setShowCopiedToast(true);
-    setTimeout(() => setShowCopiedToast(false), 2000);
+    // Try modern Clipboard API first (requires secure context). If it fails
+    // (e.g. site served over HTTP), fall back to a textarea+execCommand copy
+    // and finally show a prompt as last resort.
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(absoluteUrl);
+      copied = true;
+    } catch (e) {
+      // fallback below
+    }
+
+    if (!copied) {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = absoluteUrl;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "absolute";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        const sel = document.getSelection();
+        const range = sel && sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
+        ta.select();
+        copied = document.execCommand("copy");
+        document.body.removeChild(ta);
+        if (range && sel) {
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      } catch (e) {
+        copied = false;
+      }
+    }
+
+    if (!copied) {
+      // last resort: show a prompt so the user can copy manually
+      // eslint-disable-next-line no-alert
+      window.prompt("Copy URL (Ctrl/Cmd+C, Enter)", absoluteUrl);
+    } else {
+      setShowCopiedToast(true);
+      setTimeout(() => setShowCopiedToast(false), 2000);
+    }
   }
 
   async function enterFullscreen(targetRef: RefObject<HTMLElement | null>) {
