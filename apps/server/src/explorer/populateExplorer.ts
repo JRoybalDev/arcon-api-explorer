@@ -165,7 +165,12 @@ async function syncFolders(scannedFolders: ScannedFolder[], options: { prune: bo
       .map((folder) => folder.id);
 
     if (obsoleteFolderIds.length > 0) {
-      await db.delete(explorerFolders).where(inArray(explorerFolders.id, obsoleteFolderIds));
+      // delete in chunks to avoid excessively large parameter lists
+      const CHUNK = 1000;
+      for (let i = 0; i < obsoleteFolderIds.length; i += CHUNK) {
+        const chunk = obsoleteFolderIds.slice(i, i + CHUNK);
+        await db.delete(explorerFolders).where(inArray(explorerFolders.id, chunk));
+      }
     }
   }
 
@@ -210,7 +215,12 @@ async function syncMedia(scannedMedia: ScannedMedia[], folders: Map<string, Fold
   if (options.prune) {
     const obsoleteIds = existing.filter((media) => !processedKeys.has(media.storageKey)).map((media) => media.id);
     if (obsoleteIds.length > 0) {
-      await db.delete(explorerMedia).where(and(eq(explorerMedia.source, "indexed"), inArray(explorerMedia.id, obsoleteIds)));
+      // delete in chunks to avoid building a huge IN parameter list
+      const CHUNK = 1000;
+      for (let i = 0; i < obsoleteIds.length; i += CHUNK) {
+        const chunk = obsoleteIds.slice(i, i + CHUNK);
+        await db.delete(explorerMedia).where(and(eq(explorerMedia.source, "indexed"), inArray(explorerMedia.id, chunk)));
+      }
     }
   }
 }
