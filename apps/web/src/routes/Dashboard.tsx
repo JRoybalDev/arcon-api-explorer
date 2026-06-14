@@ -1414,7 +1414,11 @@ function UploadsPanel({
             <article className="media-card" key={upload.id}>
               <div className="media-card__preview">
                 {isImage ? <img src={previewUrl} alt="" /> : null}
-                {isVideo ? <video src={upload.url} muted playsInline controls /> : null}
+                {isVideo ? (
+                  <video src={upload.url} muted playsInline controls 
+                    disableRemotePlayback 
+                    webkit-disable-remote-playback="true" />
+                ) : null}
                 {!isImage && !isVideo ? <FiFileText aria-hidden /> : null}
               </div>
               <div className="media-card__body">

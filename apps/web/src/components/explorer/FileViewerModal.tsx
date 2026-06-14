@@ -1,4 +1,4 @@
-import { type MouseEvent, type RefObject, type TouchEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type MouseEvent, type RefObject, type TouchEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FiArrowLeft, FiCopy, FiDownload, FiHeart, FiImage, FiLock, FiMaximize2, FiMoreVertical, FiPauseCircle, FiPlayCircle, FiPlus, FiRefreshCw, FiRepeat, FiRotateCw, FiShuffle, FiSkipBack, FiSkipForward, FiTrash2, FiVideo, FiX, FiZap } from "react-icons/fi";
 import { FaDice, FaHeart } from "react-icons/fa";
@@ -213,7 +213,7 @@ export function FileViewerModal({
   }, [file.id, mobileMenuOpen]);
 
   useEffect(() => {
-    if (!autoEnabled || isVideo) {
+    if ((!autoEnabled && loopEnabled) || isVideo) {
       return;
     }
 
@@ -222,7 +222,7 @@ export function FileViewerModal({
     }, (autoAdvanceSettings.imageDuration || 10) * 1000);
 
     return () => window.clearTimeout(timer);
-  }, [autoEnabled, isVideo, file.id, totalFiles, autoAdvanceSettings.imageDuration]);
+  }, [autoEnabled, loopEnabled, isVideo, file.id, totalFiles, autoAdvanceSettings.imageDuration]);
 
   useEffect(() => {
     function closeOnEscape(event: KeyboardEvent) {
@@ -235,34 +235,29 @@ export function FileViewerModal({
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [interactionLocked, onClose]);
 
-  function goPrevious() {
+  const goPrevious = useCallback(() => {
     if (totalFiles > 0) {
       onNavigateByOffset(-1);
     }
-  }
+  }, [totalFiles, onNavigateByOffset]);
 
-  function goNext() {
+  const goNext = useCallback(() => {
     if (totalFiles > 0) {
       onNavigateByOffset(1);
     }
-  }
+  }, [totalFiles, onNavigateByOffset]);
 
-  function handleAutoToggle() {
-    if (!autoEnabled && loopEnabled) {
-      onLoopToggle();
-    }
+  const handleAutoToggle = useCallback(() => {
     onAutoToggle();
-  }
+  }, [onAutoToggle]);
 
-  function handleLoopToggle() {
-    if (!loopEnabled && autoEnabled) {
-      onAutoToggle();
-    }
+  const handleLoopToggle = useCallback(() => {
     onLoopToggle();
-  }
+  }, [onLoopToggle]);
 
-  function handleVideoEnded() {
-    if (!autoEnabled) {
+  const handleVideoEnded = useCallback(() => {
+    // Auto-advance if auto-advance is enabled OR if loop is off
+    if (!autoEnabled && loopEnabled) {
       return;
     }
 
@@ -279,7 +274,7 @@ export function FileViewerModal({
 
     setVideoLoops(0);
     goNext();
-  }
+  }, [autoEnabled, loopEnabled, autoAdvanceSettings, videoLoops, goNext]);
 
   async function copyUrl() {
     // Prefer the public CDN preview URL for images when available so users
@@ -776,10 +771,6 @@ export function FileViewerModal({
         ) : null}
       </header>
       )}
-
-      <div className="explorer-viewer__counter">
-        {Math.min(currentIndex + 1, totalFiles)} / {totalFiles}
-      </div>
       <button className="explorer-viewer__close" type="button" onClick={requestClose} aria-label="Close viewer">
         <FiX aria-hidden />
       </button>
@@ -824,7 +815,7 @@ export function FileViewerModal({
               videoRef={videoRef}
               src={file.url}
               autoPlay
-              loop={loopEnabled && !autoEnabled}
+              loop={loopEnabled}
               muted={false}
               onEnded={handleVideoEnded}
               showControls={viewerChromeVisible}
@@ -836,8 +827,17 @@ export function FileViewerModal({
               }}
               isRotated={isRotated}
               onRotateToggle={() => setIsRotated(!isRotated)}
+              onLoopToggle={handleLoopToggle}
+              onAutoToggle={handleAutoToggle}
               isMobile={isMobileView}
               controlsOffset={isRotated ? 10 : 45} 
+              onPrevious={goPrevious}
+              onNext={goNext}
+              onShuffle={onShuffle}
+              onRandom={onRandom}
+              shuffleEnabled={shuffleEnabled}
+              loopEnabled={loopEnabled}
+              autoEnabled={autoEnabled}
             />
           ) : null}
           {!isImage && !isVideo ? <a href={file.url}>Open file</a> : null}
@@ -1031,7 +1031,12 @@ export function FileViewerModal({
         <button aria-pressed={autoEnabled} type="button" onClick={handleAutoToggle} title="Auto">
           <FiZap aria-hidden />
         </button>
-        <button aria-pressed={interactionLocked} type="button" onClick={toggleInteractionLock} title="Lock">
+        <button 
+          aria-pressed={interactionLocked} 
+          type="button" 
+          onClick={toggleInteractionLock} 
+          title="Interaction Lock"
+        >
           <FiLock aria-hidden />
         </button>
         <button aria-pressed={loopEnabled} type="button" onClick={handleLoopToggle} title="Loop" disabled={!isVideo}>

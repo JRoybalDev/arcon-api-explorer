@@ -1526,6 +1526,24 @@
   width: 100%;
 }
 
+.explorer-video-player__nav-group,
+.explorer-video-player__util-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.explorer-video-player__util-btn.is-active,
+.explorer-video-player__util-btn[aria-pressed="true"] {
+  color: var(--explorer-accent-strong) !important;
+  background: rgba(185, 130, 85, 0.14) !important;
+  border-color: rgba(224, 176, 127, 0.32) !important;
+}
+
+.explorer-video-player__util-btn:hover {
+  color: var(--explorer-accent-strong);
+}
+
 /* Ensure the video element fills the fullscreen viewport and remains contained */
 .explorer-video-player__video:fullscreen,
 .explorer-video-player__video:-webkit-full-screen {
@@ -1790,6 +1808,13 @@
   grid-template-rows: auto auto auto 1fr auto;
   min-height: 0;
   padding: 56px 24px 18px;
+}
+
+.explorer-viewer__counter-sidebar {
+  color: var(--explorer-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.72rem;
+  margin-bottom: 8px;
 }
 
 .explorer-viewer__details h2 {

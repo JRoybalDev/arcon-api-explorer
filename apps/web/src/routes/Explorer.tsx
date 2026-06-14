@@ -269,14 +269,14 @@ function Explorer() {
         maybeLoadMoreForViewer(normalizedIndex);
     }
 
-    function navigateViewerByOffset(offset: number) {
+    const navigateViewerByOffset = useCallback((offset: number) => {
         if (viewerNextIndexOverride !== null && offset > 0) {
             void openFileAtIndex(viewerNextIndexOverride);
             return;
         }
 
         void openFileAtIndex(selectedFileIndex + offset);
-    }
+    }, [viewerNextIndexOverride, selectedFileIndex, openFileAtIndex]);
 
     function maybeLoadMoreForViewer(index: number) {
         if (index >= visibleFiles.length - 2 && visibleFiles.length < mediaTotal) {
@@ -475,7 +475,11 @@ function Explorer() {
                 }
                 isLoadingMoreFiles={contentsQuery.isPlaceholderData && contentsQuery.isFetching && mediaLimit > mediaPageSize}
                 loopEnabled={loopEnabled}
-                onAutoToggle={() => setAutoEnabled((current) => !current)}
+                onAutoToggle={useCallback(() => {
+                    const nextAuto = !autoEnabled;
+                    setAutoEnabled(nextAuto);
+                    setLoopEnabled(!nextAuto);
+                }, [autoEnabled])}
                 onFavoriteToggle={toggleFavorite}
                 onFileTagsChange={updateFileTags}
                 onFolderBack={goUpOneFolder}
@@ -484,16 +488,22 @@ function Explorer() {
                 onFilesMove={moveFiles}
                 onFolderCreate={createFolder}
                 onFolderOpen={selectFolder}
-                onLoopToggle={() => setLoopEnabled((current) => !current)}
+                onLoopToggle={useCallback(() => {
+                    const nextLoop = !loopEnabled;
+                    setLoopEnabled(nextLoop);
+                    setAutoEnabled(!nextLoop);
+                }, [loopEnabled])}
                 onLoadMoreFiles={loadMoreMedia}
                 onMediaPageSizeChange={updateMediaPageSize}
                 autoAdvanceSettings={autoAdvanceSettings}
-                onModalClose={() => {
+                onModalClose={useCallback(() => {
                     setSelectedFileId(null);
                     setSelectedExternalFile(null);
                     setSelectedFileIndexOverride(null);
                     setViewerNextIndexOverride(null);
-                }}
+                    setAutoEnabled(false);
+                    setLoopEnabled(true);
+                }, [])}
                 onRandomFile={() => void openRandomFile()}
                 onSelectedFileChange={openLoadedFile}
                 onSearchChange={setSearchQuery}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiPlay, FiPause, FiMaximize2, FiVolume2, FiVolumeX, FiRotateCw } from "react-icons/fi";
+import { FiPlay, FiPause, FiMaximize2, FiVolume2, FiVolumeX, FiRotateCw, FiSkipBack, FiSkipForward, FiRefreshCw, FiShuffle, FiZap } from "react-icons/fi";
+import { FaDice } from "react-icons/fa";
 
 type VideoPlayerProps = {
   src: string;
@@ -16,6 +17,15 @@ type VideoPlayerProps = {
   isMobile?: boolean;
   controlsOffset?: number;
   videoRef?: RefObject<HTMLVideoElement | null>;
+  onPrevious?: () => void;
+  onNext?: () => void;
+  onShuffle?: () => void;
+  onRandom?: () => void;
+  onLoopToggle?: () => void;
+  onAutoToggle?: () => void;
+  shuffleEnabled?: boolean;
+  loopEnabled?: boolean;
+  autoEnabled?: boolean;
 };
 
 function formatTime(sec = 0) {
@@ -29,7 +39,29 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false, onEnded, showControls = true, onControlsEnter, onControlsLeave, isRotated, onRotateToggle, isMobile, controlsOffset, videoRef: externalVideoRef }: VideoPlayerProps) {
+export function VideoPlayer({
+  src,
+  autoPlay = true,
+  loop = false,
+  muted = false,
+  onEnded,
+  showControls = true,
+  onControlsEnter,
+  onControlsLeave,
+  isRotated,
+  onRotateToggle,
+  isMobile,
+  controlsOffset,
+  videoRef: externalVideoRef,
+  onPrevious,
+  onNext,
+  onShuffle,
+  onRandom,
+  onLoopToggle,
+  onAutoToggle,
+  shuffleEnabled,
+  loopEnabled,
+  autoEnabled }: VideoPlayerProps) {
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const videoRef = externalVideoRef || localVideoRef;
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -40,6 +72,19 @@ export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false,
   const [current, setCurrent] = useState(0);
   const [volume, setVolume] = useState(muted ? 0 : 1);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const vid = videoRef.current;
+    if (!vid) return;
+
+    const onEndedHandler = () => {
+      setPlaying(false);
+      onEnded?.();
+    };
+
+    vid.addEventListener("ended", onEndedHandler);
+    return () => vid.removeEventListener("ended", onEndedHandler);
+  }, [onEnded]);
 
   useEffect(() => {
     const vid = videoRef.current;
@@ -61,19 +106,12 @@ export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false,
 
     if (vid.readyState >= 2) onLoaded();
 
-    const onEndedHandler = () => {
-      setPlaying(false);
-      onEnded?.();
-    };
-
     vid.addEventListener("loadedmetadata", onLoaded);
-    vid.addEventListener("ended", onEndedHandler);
 
     return () => {
       vid.removeEventListener("loadedmetadata", onLoaded);
-      vid.removeEventListener("ended", onEndedHandler);
     };
-  }, [src, autoPlay, onEnded]);
+  }, [src, autoPlay]);
 
   // Restore persisted volume from localStorage and persist changes
   useEffect(() => {
@@ -124,7 +162,7 @@ export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false,
     const vid = videoRef.current;
     if (!vid) return;
     if (vid.paused) {
-      void vid.play().then(() => setPlaying(true)).catch(() => {});
+      void vid.play().then(() => setPlaying(true)).catch(() => { });
     } else {
       vid.pause();
       setPlaying(false);
@@ -140,17 +178,15 @@ export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false,
 
   function toggleFullscreen() {
     const vid = videoRef.current;
-    const el = vid ?? containerRef.current;
+    const el = containerRef.current;
     if (!el) return;
     if (document.fullscreenElement) {
       void document.exitFullscreen();
       setIsFullscreen(false);
     } else {
-      // Request fullscreen on the actual video element when available so the media
-      // scales to fill the screen correctly.
-      void (vid ? vid.requestFullscreen() : el.requestFullscreen())
-        .then(() => setIsFullscreen(true))
-        .catch(() => {});
+      // Request fullscreen on the container so React controls remain visible
+      void el.requestFullscreen().then(() => setIsFullscreen(true))
+        .catch(() => { });
     }
   }
 
@@ -233,19 +269,19 @@ export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false,
       style={
         isRotated
           ? {
-              position: "fixed",
-              top: "50%",
-              left: "50%",
-              width: "100dvh",
-              height: "100dvw",
-              transform: "translate(-50%, -50%) rotate(90deg)",
-              maxWidth: "none",
-              maxHeight: "none",
-              display: "flex",
-              flexDirection: "column",
-              zIndex: 100,
-              borderRadius: 0,
-            }
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            width: "100dvh",
+            height: "100dvw",
+            transform: "translate(-50%, -50%) rotate(90deg)",
+            maxWidth: "none",
+            maxHeight: "none",
+            display: "flex",
+            flexDirection: "column",
+            zIndex: 100,
+            borderRadius: 0,
+          }
           : { height: "100%", width: "100%", position: "relative" }
       }
     >
@@ -254,12 +290,19 @@ export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false,
         src={src}
         className="explorer-video-player__video"
         playsInline
+        onClick={togglePlay}
+        onPointerMove={(e) => {
+          e.stopPropagation();
+          onControlsEnter?.();
+        }}
         autoPlay={autoPlay}
         loop={loop}
+        disableRemotePlayback
+        webkit-disable-remote-playback="true"
         style={{
           width: '100%',
           height: '100%',
-          maxHeight: 'none',
+          maxHeight: isFullscreen ? '100dvh' : 'none',
           maxWidth: 'none',
           objectFit: 'contain'
         }}
@@ -269,6 +312,10 @@ export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false,
       <div
         className="explorer-video-player__controls-hover"
         onPointerEnter={(e) => {
+          e.stopPropagation();
+          onControlsEnter?.();
+        }}
+        onPointerMove={(e) => {
           e.stopPropagation();
           onControlsEnter?.();
         }}
@@ -299,12 +346,18 @@ export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false,
             transition={{ duration: 0.18 }}
             style={isMobile ? {
               bottom: `calc(env(safe-area-inset-bottom, 0px) + ${controlsOffset || 0}px)`,
-              left: isRotated ? "50%" : 0,
-              x: isRotated ? "-50%" : 0,
-              width: isRotated ? "92%" : "100%",
+              left: "50%",
+              x: "-50%",
+              width: isRotated ? "92%" : "94%",
               maxWidth: isRotated ? "600px" : "none",
-              borderRadius: isRotated ? "12px" : 0,
-            } : {}}
+              borderRadius: "12px",
+            } : {
+              bottom: "16px",
+              left: "50%",
+              x: "-50%",
+              width: "calc(100% - 32px)",
+              borderRadius: "12px",
+            }}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
@@ -314,14 +367,33 @@ export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false,
               e.stopPropagation();
               onControlsEnter?.();
             }}
+            onPointerMove={(e) => {
+              e.stopPropagation();
+              onControlsEnter?.();
+            }}
             onPointerLeave={(e) => {
               e.stopPropagation();
               onControlsLeave?.();
             }}
           >
-            <button className="explorer-video-player__play" onClick={togglePlay} aria-label={playing ? "Pause" : "Play"}>
-              {playing ? <FiPause /> : <FiPlay />}
-            </button>
+            <div 
+              className="explorer-video-player__nav-group"
+              style={!isMobile && isFullscreen ? { gap: '12px' } : {}}
+            >
+              {!isMobile && (
+                <button className="explorer-video-player__nav-btn" onClick={onPrevious} aria-label="Previous">
+                  <FiSkipBack />
+                </button>
+              )}
+              <button className="explorer-video-player__play" onClick={togglePlay} aria-label={playing ? "Pause" : "Play"}>
+                {playing ? <FiPause /> : <FiPlay />}
+              </button>
+              {!isMobile && (
+                <button className="explorer-video-player__nav-btn" onClick={onNext} aria-label="Next">
+                  <FiSkipForward />
+                </button>
+              )}
+            </div>
 
             <div className="explorer-video-player__time">{formatTime(current)}</div>
 
@@ -360,27 +432,65 @@ export function VideoPlayer({ src, autoPlay = true, loop = false, muted = false,
               >
                 {volume > 0.001 ? <FiVolume2 /> : <FiVolumeX />}
               </button>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={volume}
-                onPointerDown={(e) => e.stopPropagation()}
-                onChange={(e) => setVolume(Number(e.target.value))}
-                aria-label="Volume"
-              />
+              {!isMobile && (
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={volume}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onChange={(e) => setVolume(Number(e.target.value))}
+                  aria-label="Volume"
+                />
+              )}
             </div>
 
-            {isMobile && onRotateToggle ? (
-              <button className="explorer-video-player__rotate" onClick={onRotateToggle} aria-label="Rotate">
-                <FiRotateCw />
-              </button>
-            ) : (
-              <button className="explorer-video-player__fullscreen" onClick={toggleFullscreen} aria-label="Fullscreen">
-                <FiMaximize2 />
-              </button>
-            )}
+            <div 
+              className="explorer-video-player__util-group"
+              style={!isMobile && isFullscreen ? { gap: '12px' } : {}}
+            >
+              {isMobile ? (
+                onRotateToggle && (
+                  <button className="explorer-video-player__util-btn" onClick={onRotateToggle} aria-label="Rotate">
+                    <FiRotateCw />
+                  </button>
+                )
+              ) : (
+                <>
+                  {isFullscreen && (
+                    <>
+                      <button
+                        className={`explorer-video-player__util-btn ${loopEnabled ? 'is-active' : ''}`}
+                        onClick={onLoopToggle}
+                        aria-label="Loop"
+                        aria-pressed={loopEnabled}
+                      >
+                        <FiRefreshCw />
+                      </button>
+                      <button
+                        className={`explorer-video-player__util-btn ${shuffleEnabled ? 'is-active' : ''}`}
+                        onClick={onShuffle}
+                        aria-label="Shuffle"
+                        aria-pressed={shuffleEnabled}
+                      >
+                        <FiShuffle />
+                      </button>
+                      <button
+                        className="explorer-video-player__util-btn"
+                        onClick={onRandom}
+                        aria-label="Random"
+                      >
+                        <FaDice />
+                      </button>
+                    </>
+                  )}
+                  <button className="explorer-video-player__fullscreen" onClick={toggleFullscreen} aria-label="Fullscreen">
+                    <FiMaximize2 />
+                  </button>
+                </>
+              )}
+            </div>
           </motion.div>
         ) : null}
       </AnimatePresence>
