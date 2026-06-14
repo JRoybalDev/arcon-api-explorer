@@ -55,7 +55,7 @@ function Explorer() {
 
         return "medium";
     });
-        const [autoAdvanceSettings, setAutoAdvanceSettings] = useState(() => {
+    const [autoAdvanceSettings, setAutoAdvanceSettings] = useState(() => {
         try {
             const saved = localStorage.getItem("explorer.autoAdvanceSettings");
             if (saved) return JSON.parse(saved);
@@ -442,6 +442,27 @@ function Explorer() {
         ]);
     }
 
+    const handleAutoToggle = useCallback(() => {
+        const nextAuto = !autoEnabled;
+        setAutoEnabled(nextAuto);
+        setLoopEnabled(!nextAuto);
+    }, [autoEnabled]);
+
+    const handleLoopToggle = useCallback(() => {
+        const nextLoop = !loopEnabled;
+        setLoopEnabled(nextLoop);
+        setAutoEnabled(!nextLoop);
+    }, [loopEnabled]);
+
+    const handleModalClose = useCallback(() => {
+        setSelectedFileId(null);
+        setSelectedExternalFile(null);
+        setSelectedFileIndexOverride(null);
+        setViewerNextIndexOverride(null);
+        setAutoEnabled(false);
+        setLoopEnabled(true);
+    }, []);
+
     if (!adminSession.isUnlocked && !adminSession.isChecking) {
         return <SignIn isChecking={adminSession.isChecking} isInvalid={adminSession.isInvalid} onUnlock={adminSession.unlock} />;
     }
@@ -469,17 +490,13 @@ function Explorer() {
                 filter={filter}
                 folders={visibleFolders}
                 isLoadingFiles={
-                    foldersQuery.isLoading || 
-                    contentsQuery.isLoading || 
+                    foldersQuery.isLoading ||
+                    contentsQuery.isLoading ||
                     (contentsQuery.isPlaceholderData && contentsQuery.isFetching && mediaLimit === mediaPageSize)
                 }
                 isLoadingMoreFiles={contentsQuery.isPlaceholderData && contentsQuery.isFetching && mediaLimit > mediaPageSize}
                 loopEnabled={loopEnabled}
-                onAutoToggle={useCallback(() => {
-                    const nextAuto = !autoEnabled;
-                    setAutoEnabled(nextAuto);
-                    setLoopEnabled(!nextAuto);
-                }, [autoEnabled])}
+                onAutoToggle={handleAutoToggle}
                 onFavoriteToggle={toggleFavorite}
                 onFileTagsChange={updateFileTags}
                 onFolderBack={goUpOneFolder}
@@ -488,22 +505,11 @@ function Explorer() {
                 onFilesMove={moveFiles}
                 onFolderCreate={createFolder}
                 onFolderOpen={selectFolder}
-                onLoopToggle={useCallback(() => {
-                    const nextLoop = !loopEnabled;
-                    setLoopEnabled(nextLoop);
-                    setAutoEnabled(!nextLoop);
-                }, [loopEnabled])}
+                onLoopToggle={handleLoopToggle}
                 onLoadMoreFiles={loadMoreMedia}
                 onMediaPageSizeChange={updateMediaPageSize}
                 autoAdvanceSettings={autoAdvanceSettings}
-                onModalClose={useCallback(() => {
-                    setSelectedFileId(null);
-                    setSelectedExternalFile(null);
-                    setSelectedFileIndexOverride(null);
-                    setViewerNextIndexOverride(null);
-                    setAutoEnabled(false);
-                    setLoopEnabled(true);
-                }, [])}
+                onModalClose={handleModalClose}
                 onRandomFile={() => void openRandomFile()}
                 onSelectedFileChange={openLoadedFile}
                 onSearchChange={setSearchQuery}
