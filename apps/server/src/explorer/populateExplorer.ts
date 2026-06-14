@@ -194,7 +194,11 @@ async function syncMedia(scannedMedia: ScannedMedia[], folders: Map<string, Fold
   const existingByKey = new Map(existing.map((media) => [media.storageKey, media]));
   const processedKeys = new Set<string>();
 
+  const total = scannedMedia.length;
+  let processedCount = 0;
+
   for (const item of scannedMedia) {
+    processedCount += 1;
     const existingMedia = existingByKey.get(item.relativePath);
     const folderId = item.folderPath ? folders.get(item.folderPath)?.id ?? null : null;
     const values = {
@@ -212,6 +216,21 @@ async function syncMedia(scannedMedia: ScannedMedia[], folders: Map<string, Fold
     };
 
     processedKeys.add(item.relativePath);
+
+    // Per-file logging (opt-in) and periodic progress logging
+    try {
+      if (env.populateExplorerLogFiles) {
+        logger.info("explorer.populate.media_file", { index: processedCount, total, storageKey: item.relativePath, folderPath: item.folderPath });
+      }
+
+      const interval = Math.max(1, Number(env.populateExplorerLogInterval ?? 100));
+      if (processedCount % interval === 0 || processedCount === total) {
+        logger.info("explorer.populate.progress", { processed: processedCount, total });
+      }
+    } catch (err) {
+      // Logging shouldn't interrupt processing
+      logger.warn("explorer.populate.logging_failed", { error: err, storageKey: item.relativePath });
+    }
 
     if (existingMedia) {
       try {

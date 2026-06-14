@@ -47,6 +47,8 @@ export const env = {
   autoPopulateExplorer: process.env.AUTO_POPULATE_EXPLORER !== "false",
   populateExplorerIntervalMs: Number(process.env.POPULATE_EXPLORER_INTERVAL_MS ?? 60 * 60 * 1000),
   populateExplorerOnStartup: process.env.POPULATE_EXPLORER_ON_STARTUP !== "false",
+  populateExplorerLogFiles: process.env.POPULATE_EXPLORER_LOG_FILES === "true",
+  populateExplorerLogInterval: Number(process.env.POPULATE_EXPLORER_LOG_INTERVAL ?? 100),
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET,
