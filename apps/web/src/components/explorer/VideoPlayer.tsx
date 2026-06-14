@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiPlay, FiPause, FiMaximize2, FiVolume2, FiVolumeX, FiRotateCw, FiSkipBack, FiSkipForward, FiRefreshCw, FiShuffle, FiZap } from "react-icons/fi";
 import { FaDice } from "react-icons/fa";
@@ -145,7 +145,7 @@ export function VideoPlayer({
   }, [volume]);
 
   useEffect(() => {
-    const tick = () => {
+    const tick = (time: number) => {
       const vid = videoRef.current;
       if (!vid) return;
       setCurrent(vid.currentTime || 0);
@@ -158,7 +158,7 @@ export function VideoPlayer({
     };
   }, []);
 
-  function togglePlay() {
+  const togglePlay = useCallback(() => {
     const vid = videoRef.current;
     if (!vid) return;
     if (vid.paused) {
@@ -167,16 +167,16 @@ export function VideoPlayer({
       vid.pause();
       setPlaying(false);
     }
-  }
+  }, [videoRef]);
 
-  function seekTo(percent: number) {
+  const seekTo = useCallback((percent: number) => {
     const vid = videoRef.current;
     if (!vid || !isFinite(duration) || duration <= 0) return;
     vid.currentTime = Math.max(0, Math.min(duration, percent * duration));
     setCurrent(vid.currentTime);
-  }
+  }, [videoRef, duration]);
 
-  function toggleFullscreen() {
+  const toggleFullscreen = useCallback(() => {
     const vid = videoRef.current;
     const el = containerRef.current;
     if (!el) return;
@@ -188,7 +188,7 @@ export function VideoPlayer({
       void el.requestFullscreen().then(() => setIsFullscreen(true))
         .catch(() => { });
     }
-  }
+  }, [videoRef]);
 
   useEffect(() => {
     function onFullScreenChange() {

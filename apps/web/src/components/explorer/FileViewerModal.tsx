@@ -93,8 +93,15 @@ export function FileViewerModal({
   const nextFile = loadedIndex >= 0 ? files[loadedIndex + 1] ?? null : null;
   const previousFile = loadedIndex > 0 ? files[loadedIndex - 1] ?? null : null;
   const previewFile = swipePreviewFile;
-  const stageWidth = stageRef.current?.clientWidth ?? (typeof window === "undefined" ? 390 : window.innerWidth);
+  const [stageWidth, setStageWidth] = useState(typeof window === "undefined" ? 390 : window.innerWidth);
   const swipeGap = 28;
+
+  useEffect(() => {
+    if (stageRef.current) {
+      setStageWidth(stageRef.current.clientWidth);
+    }
+  }, []);
+
   const incomingItemX = getIncomingItemX({ dragX: dragOffset.x, previewDirection, stageWidth, swipeGap, swipeState });
   const activeItemX = getActiveItemX({ dragX: dragOffset.x, stageWidth, swipeGap, swipeState });
   const viewerOffsetY = swipeState === "close" ? (typeof window === "undefined" ? 900 : window.innerHeight) : swipeState === "reset" ? 0 : dragOffset.y;
