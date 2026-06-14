@@ -68,7 +68,19 @@ async function scanContentDirectory(directory: string, root: string): Promise<Sc
   for (const entry of entries) {
     const absolutePath = join(directory, entry.name);
 
-    if (entry.isDirectory()) {
+    // If this entry is a symbolic link, try to resolve its real type. Some mounts
+    // or external storage may appear as symlinks and should be scanned.
+    let realIsDirectory = entry.isDirectory();
+    let realIsFile = entry.isFile();
+    if (entry.isSymbolicLink()) {
+      const realStats = await stat(absolutePath).catch(() => null);
+      if (realStats) {
+        realIsDirectory = realStats.isDirectory();
+        realIsFile = realStats.isFile();
+      }
+    }
+
+    if (realIsDirectory) {
       if (!shouldIgnoreDirectory(entry.name)) {
         const relativePath = normalizeContentPath(absolutePath.substring(root.length));
         const parentPath = normalizeContentPath(posix.dirname(relativePath) === "." ? "" : posix.dirname(relativePath));
@@ -86,7 +98,7 @@ async function scanContentDirectory(directory: string, root: string): Promise<Sc
       continue;
     }
 
-    if (!entry.isFile() || entry.name.startsWith("thumb_")) {
+    if (!realIsFile || entry.name.startsWith("thumb_")) {
       continue;
     }
 
@@ -202,14 +214,22 @@ async function syncMedia(scannedMedia: ScannedMedia[], folders: Map<string, Fold
     processedKeys.add(item.relativePath);
 
     if (existingMedia) {
-      await db.update(explorerMedia).set(values).where(eq(explorerMedia.id, existingMedia.id));
+      try {
+        await db.update(explorerMedia).set(values).where(eq(explorerMedia.id, existingMedia.id));
+      } catch (error) {
+        logger.error("explorer.populate.media_update_failed", { error, storageKey: item.relativePath, id: existingMedia.id });
+      }
       continue;
     }
 
-    await db.insert(explorerMedia).values({
-      ...values,
-      createdAt: item.createdAt
-    });
+    try {
+      await db.insert(explorerMedia).values({
+        ...values,
+        createdAt: item.createdAt
+      });
+    } catch (error) {
+      logger.error("explorer.populate.media_insert_failed", { error, storageKey: item.relativePath, values });
+    }
   }
 
   if (options.prune) {
