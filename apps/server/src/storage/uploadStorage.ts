@@ -1,6 +1,7 @@
 import { v2 as cloudinary, type UploadApiResponse } from "cloudinary";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { createWriteStream } from "node:fs";
 import { Readable } from "node:stream";
 import type { UploadRow } from "../../db/schema";
 import { env } from "../env";
@@ -32,7 +33,23 @@ async function storeLocalUpload(file: File): Promise<StoredUpload> {
 
   const safeName = `${crypto.randomUUID()}.${extensionFor(file)}`;
   const path = join(env.uploadDir, safeName);
-  await writeFile(path, Buffer.from(await file.arrayBuffer()));
+
+  // Stream the incoming file to disk to avoid buffering large files in memory
+  await new Promise<void>((resolve, reject) => {
+    const writeStream = createWriteStream(path, { flags: "w" });
+    const nodeReadable = (Readable as any).fromWeb?.(file.stream() as any) ?? Readable.from(file.stream() as any);
+
+    nodeReadable.on("error", (err: any) => {
+      writeStream.destroy(err);
+      reject(err);
+    });
+
+    writeStream.on("error", (err) => reject(err));
+    writeStream.on("finish", () => resolve());
+
+    nodeReadable.pipe(writeStream);
+  });
+
   const thumbnail = await createThumbnail(file, env.uploadDir);
 
   return {
@@ -59,10 +76,6 @@ function assertCloudinaryConfigured() {
 
 async function uploadToCloudinary(file: File): Promise<UploadApiResponse> {
   assertCloudinaryConfigured();
-
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-
   return new Promise((resolve, reject) => {
     const upload = cloudinary.uploader.upload_stream(
       {
@@ -81,7 +94,10 @@ async function uploadToCloudinary(file: File): Promise<UploadApiResponse> {
       }
     );
 
-    Readable.from(buffer).pipe(upload);
+    // Pipe the web ReadableStream directly into Cloudinary upload stream to avoid buffering
+    const nodeReadable = (Readable as any).fromWeb?.(file.stream() as any) ?? Readable.from(file.stream() as any);
+    nodeReadable.on("error", (err: any) => reject(err));
+    nodeReadable.pipe(upload as any);
   });
 }
 

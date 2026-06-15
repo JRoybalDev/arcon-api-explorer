@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import sharp from "sharp";
+import { Readable } from "node:stream";
 import { logger } from "../logger";
 
 export type CreatedThumbnail = {
@@ -24,9 +25,10 @@ export async function createThumbnail(file: File, uploadDir: string): Promise<Cr
   const path = join(uploadDir, filename);
 
   try {
-    const input = Buffer.from(await file.arrayBuffer());
+    // Stream the file into sharp to avoid buffering large image files in memory
+    const nodeReadable = (Readable as any).fromWeb?.(file.stream() as any) ?? Readable.from(file.stream() as any);
 
-    await sharp(input)
+    await sharp(nodeReadable as any)
       .rotate()
       .resize(thumbnailSize, thumbnailSize, {
         fit: "inside",
